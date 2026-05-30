@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -22,6 +23,11 @@ import (
 func main() {
 	cfg := config.Load()
 	logger := newLogger(cfg.LogLevel)
+
+	if err := validateWebDistPath(cfg.WebDistPath); err != nil {
+		logger.Error("validate web dist path failed", slog.Any("err", err))
+		os.Exit(1)
+	}
 
 	if err := os.MkdirAll(filepath.Dir(cfg.SQLitePath), 0o755); err != nil {
 		logger.Error("create data dir failed", slog.Any("err", err))
@@ -83,6 +89,24 @@ func main() {
 	defer cancel()
 	_ = srv.Shutdown(ctx)
 	logger.Info("server stopped")
+}
+
+func validateWebDistPath(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("%s is not a directory", path)
+	}
+	indexInfo, err := os.Stat(filepath.Join(path, "index.html"))
+	if err != nil {
+		return err
+	}
+	if !indexInfo.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", filepath.Join(path, "index.html"))
+	}
+	return nil
 }
 
 func newLogger(level string) *slog.Logger {

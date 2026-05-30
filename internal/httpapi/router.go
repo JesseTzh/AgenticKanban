@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -37,7 +39,7 @@ func NewRouter(d Dependencies) http.Handler {
 	r := gin.New()
 	r.Use(gin.Recovery(), requestLogger(d.Logger))
 	a := &api{d: d}
-	r.GET("/api/health", func(c *gin.Context) { c.JSON(200, gin.H{"ok": true}) })
+	r.GET("/api/health", func(c *gin.Context) { success(c, 200, gin.H{"ok": true}) })
 	r.POST("/api/auth/login", a.login)
 
 	authn := r.Group("/api", a.session())
@@ -79,9 +81,50 @@ func NewRouter(d Dependencies) http.Handler {
 	agent.POST("/tasks/:taskID/claim", a.agentClaim)
 	agent.POST("/tasks/:taskID/submit", a.agentSubmit)
 
-	r.NoRoute(func(c *gin.Context) { c.JSON(404, gin.H{"error": "not found"}) })
+	webFiles := http.Dir(d.Config.WebDistPath)
+	webServer := http.FileServer(webFiles)
+	webIndex := filepath.Join(d.Config.WebDistPath, "index.html")
+	r.NoRoute(func(c *gin.Context) {
+		if isAPIPath(c.Request.URL.Path) || (c.Request.Method != http.MethodGet && c.Request.Method != http.MethodHead) {
+			notFound(c)
+			return
+		}
+		if file, err := webFiles.Open(c.Request.URL.Path); err == nil {
+			_ = file.Close()
+			webServer.ServeHTTP(c.Writer, c.Request)
+			return
+		}
+		c.File(webIndex)
+	})
 	return r
 }
+
+func isAPIPath(path string) bool {
+	return path == "/api" || strings.HasPrefix(path, "/api/")
+}
+
+func success(c *gin.Context, code int, data any) {
+	c.JSON(code, gin.H{"data": normalizeJSONData(data), "error": nil})
+}
+
+func normalizeJSONData(data any) any {
+	value := reflect.ValueOf(data)
+	if value.IsValid() && value.Kind() == reflect.Slice && value.IsNil() {
+		return reflect.MakeSlice(value.Type(), 0, 0).Interface()
+	}
+	return data
+}
+
+func failure(c *gin.Context, code int, errorCode, message string) {
+	c.JSON(code, gin.H{"data": nil, "error": gin.H{"code": errorCode, "message": message}})
+}
+
+func abortFailure(c *gin.Context, code int, errorCode, message string) {
+	c.Abort()
+	failure(c, code, errorCode, message)
+}
+
+func notFound(c *gin.Context) { failure(c, 404, "not_found", "not found") }
 
 func requestLogger(log *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -125,7 +168,7 @@ func (a *api) require(obj, act string) gin.HandlerFunc {
 		u := a.current(c)
 		if !a.d.Perm.Allow(u.Role, obj, act) {
 			a.d.Logger.Warn("permission denied", slog.String("user", u.Username), slog.String("obj", obj), slog.String("act", act))
-			c.AbortWithStatusJSON(403, gin.H{"error": "permission denied"})
+			abortFailure(c, 403, "permission_denied", "permission denied")
 			return
 		}
 		c.Next()
@@ -153,7 +196,7 @@ func (a *api) agentAuth() gin.HandlerFunc {
 		c.Next()
 	}
 }
-func unauth(c *gin.Context)                 { c.AbortWithStatusJSON(401, gin.H{"error": "unauthorized"}) }
+func unauth(c *gin.Context)                 { abortFailure(c, 401, "unauthorized", "unauthorized") }
 func reqctx(c *gin.Context) context.Context { return c.Request.Context() }
 func actor(c *gin.Context) string {
 	if u, ok := c.Get("user"); ok {
@@ -166,16 +209,20 @@ func actor(c *gin.Context) string {
 }
 func bad(c *gin.Context, err error) {
 	code := 400
+	errorCode := "bad_request"
 	if errors.Is(err, store.ErrNotFound) {
 		code = 404
+		errorCode = "not_found"
 	}
 	if errors.Is(err, store.ErrCommitRequired) {
 		code = 409
+		errorCode = "commit_required"
 	}
 	if errors.Is(err, store.ErrLocked) {
 		code = 409
+		errorCode = "locked"
 	}
-	c.JSON(code, gin.H{"error": err.Error()})
+	failure(c, code, errorCode, err.Error())
 }
 
 func (a *api) login(c *gin.Context) {
@@ -187,7 +234,7 @@ func (a *api) login(c *gin.Context) {
 	u, err := a.d.Store.GetUserByUsername(reqctx(c), in.Username)
 	if err != nil || !auth.VerifyPassword(in.Password, u.PasswordHash, a.d.Config.SessionSecret) {
 		a.d.Logger.Warn("login failed", slog.String("username", in.Username))
-		c.JSON(401, gin.H{"error": "invalid credentials"})
+		failure(c, 401, "invalid_credentials", "invalid credentials")
 		return
 	}
 	tok, err := auth.CreateSession(reqctx(c), a.d.Store, u.ID, a.d.Config.SessionTTL, a.d.Config.SessionSecret)
@@ -197,7 +244,7 @@ func (a *api) login(c *gin.Context) {
 	}
 	a.d.Logger.Info("login success", slog.String("username", u.Username))
 	c.SetCookie("ak_session", tok, int(a.d.Config.SessionTTL.Seconds()), "/", "", false, true)
-	c.JSON(200, gin.H{"user": u})
+	success(c, 200, gin.H{"user": u})
 }
 func (a *api) logout(c *gin.Context) {
 	tok, _ := c.Cookie("ak_session")
@@ -205,16 +252,16 @@ func (a *api) logout(c *gin.Context) {
 	_ = a.d.Store.DeleteSession(reqctx(c), h)
 	a.d.Cache.Del("session:" + h)
 	c.SetCookie("ak_session", "", -1, "/", "", false, true)
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }
-func (a *api) me(c *gin.Context) { c.JSON(200, gin.H{"user": a.current(c)}) }
+func (a *api) me(c *gin.Context) { success(c, 200, gin.H{"user": a.current(c)}) }
 func (a *api) projects(c *gin.Context) {
 	xs, err := a.d.Store.ListProjects(reqctx(c))
 	if err != nil {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, xs)
+	success(c, 200, xs)
 }
 func (a *api) createProject(c *gin.Context) {
 	var in struct{ Name, Description string }
@@ -227,7 +274,7 @@ func (a *api) createProject(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(201, p)
+	success(c, 201, p)
 }
 func (a *api) project(c *gin.Context) {
 	p, err := a.d.Store.GetProject(reqctx(c), c.Param("projectID"))
@@ -235,7 +282,7 @@ func (a *api) project(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, p)
+	success(c, 200, p)
 }
 func (a *api) updateProject(c *gin.Context) {
 	var in struct{ Name, Description string }
@@ -247,14 +294,14 @@ func (a *api) updateProject(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }
 func (a *api) deleteProject(c *gin.Context) {
 	if err := a.d.Store.DeleteProject(reqctx(c), c.Param("projectID"), actor(c)); err != nil {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }
 func (a *api) board(c *gin.Context) {
 	xs, err := a.d.Store.Board(reqctx(c), c.Param("projectID"))
@@ -262,7 +309,7 @@ func (a *api) board(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, xs)
+	success(c, 200, xs)
 }
 func (a *api) tasks(c *gin.Context) {
 	xs, err := a.d.Store.ListTasks(reqctx(c), c.Param("projectID"))
@@ -270,7 +317,7 @@ func (a *api) tasks(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, xs)
+	success(c, 200, xs)
 }
 func (a *api) createTask(c *gin.Context) {
 	var in domain.Task
@@ -284,7 +331,7 @@ func (a *api) createTask(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(201, t)
+	success(c, 201, t)
 }
 func (a *api) task(c *gin.Context) {
 	t, err := a.d.Store.GetTask(reqctx(c), c.Param("taskID"))
@@ -292,7 +339,7 @@ func (a *api) task(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, t)
+	success(c, 200, t)
 }
 func (a *api) updateTask(c *gin.Context) {
 	var in domain.Task
@@ -305,14 +352,14 @@ func (a *api) updateTask(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }
 func (a *api) deleteTask(c *gin.Context) {
 	if err := a.d.Store.DeleteTask(reqctx(c), c.Param("taskID"), actor(c)); err != nil {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }
 func (a *api) transitionTask(c *gin.Context) {
 	var in struct{ StageKey, Status, Reason string }
@@ -324,7 +371,7 @@ func (a *api) transitionTask(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }
 func (a *api) lockTask(v bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -332,7 +379,7 @@ func (a *api) lockTask(v bool) gin.HandlerFunc {
 			bad(c, err)
 			return
 		}
-		c.JSON(200, gin.H{"ok": true})
+		success(c, 200, gin.H{"ok": true})
 	}
 }
 func (a *api) approveTask(c *gin.Context) {
@@ -345,7 +392,7 @@ func (a *api) approveTask(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }
 func (a *api) repositories(c *gin.Context) {
 	xs, err := a.d.Store.ListRepositories(reqctx(c), c.Param("projectID"))
@@ -353,7 +400,7 @@ func (a *api) repositories(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, xs)
+	success(c, 200, xs)
 }
 func (a *api) createRepository(c *gin.Context) {
 	var in domain.Repository
@@ -367,7 +414,7 @@ func (a *api) createRepository(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(201, gin.H{"repository": r, "webhook_url": fmt.Sprintf("%s/api/webhooks/%s/%s", a.d.Config.WebhookBaseURL, r.ID, r.WebhookSecret)})
+	success(c, 201, gin.H{"repository": r, "webhook_url": fmt.Sprintf("%s/api/webhooks/%s/%s", a.d.Config.WebhookBaseURL, r.ID, r.WebhookSecret)})
 }
 func (a *api) updateRepository(c *gin.Context) {
 	var in domain.Repository
@@ -380,14 +427,14 @@ func (a *api) updateRepository(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }
 func (a *api) deleteRepository(c *gin.Context) {
 	if err := a.d.Store.DeleteRepository(reqctx(c), c.Param("repoID"), actor(c)); err != nil {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }
 func (a *api) commits(c *gin.Context) {
 	xs, err := a.d.Store.ListCommits(reqctx(c), c.Param("projectID"))
@@ -395,7 +442,7 @@ func (a *api) commits(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, xs)
+	success(c, 200, xs)
 }
 func (a *api) linkCommit(c *gin.Context) {
 	var in struct{ CommitID string }
@@ -407,14 +454,14 @@ func (a *api) linkCommit(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }
 func (a *api) unlinkCommit(c *gin.Context) {
 	if err := a.d.Store.UnlinkCommit(reqctx(c), c.Param("taskID"), c.Param("commitID"), actor(c)); err != nil {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }
 func (a *api) review(c *gin.Context) {
 	var in struct{ Verdict, Note string }
@@ -426,7 +473,7 @@ func (a *api) review(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }
 func (a *api) testRecord(c *gin.Context) {
 	var in struct{ Verdict, Note string }
@@ -439,7 +486,7 @@ func (a *api) testRecord(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true, "defect_task_id": defect})
+	success(c, 200, gin.H{"ok": true, "defect_task_id": defect})
 }
 func (a *api) archive(c *gin.Context) {
 	var in struct{ Content string }
@@ -452,7 +499,7 @@ func (a *api) archive(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(201, ar)
+	success(c, 201, ar)
 }
 func (a *api) archives(c *gin.Context) {
 	xs, err := a.d.Store.ListArchives(reqctx(c), c.Param("projectID"))
@@ -460,7 +507,7 @@ func (a *api) archives(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, xs)
+	success(c, 200, xs)
 }
 func (a *api) archiveRef(c *gin.Context) {
 	var in struct{ ArchiveID string }
@@ -472,7 +519,7 @@ func (a *api) archiveRef(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }
 
 func (a *api) agentTokens(c *gin.Context) {
@@ -481,7 +528,7 @@ func (a *api) agentTokens(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, xs)
+	success(c, 200, xs)
 }
 func (a *api) createAgentToken(c *gin.Context) {
 	var in struct{ Name string }
@@ -495,7 +542,7 @@ func (a *api) createAgentToken(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(201, gin.H{"id": id, "name": in.Name, "token": raw})
+	success(c, 201, gin.H{"id": id, "name": in.Name, "token": raw})
 }
 
 func (a *api) webhook(c *gin.Context) {
@@ -505,11 +552,11 @@ func (a *api) webhook(c *gin.Context) {
 		return
 	}
 	if !repo.WebhookEnabled {
-		c.JSON(409, gin.H{"error": "webhook disabled"})
+		failure(c, 409, "webhook_disabled", "webhook disabled")
 		return
 	}
 	if subtle.ConstantTimeCompare([]byte(repo.WebhookSecret), []byte(c.Param("secret"))) != 1 {
-		c.JSON(401, gin.H{"error": "invalid webhook secret"})
+		failure(c, 401, "invalid_webhook_secret", "invalid webhook secret")
 		return
 	}
 	var body struct {
@@ -535,7 +582,7 @@ func (a *api) webhook(c *gin.Context) {
 		return
 	}
 	a.d.Logger.Info("webhook processed", slog.String("repo", repo.ID), slog.Int("commits", len(commits)))
-	c.JSON(200, gin.H{"ok": true, "commits": len(commits)})
+	success(c, 200, gin.H{"ok": true, "commits": len(commits)})
 }
 func (a *api) agentTasks(c *gin.Context) {
 	xs, err := a.d.Store.ListAgentReadyTasks(reqctx(c))
@@ -543,14 +590,14 @@ func (a *api) agentTasks(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, xs)
+	success(c, 200, xs)
 }
 func (a *api) agentClaim(c *gin.Context) {
 	if err := a.d.Store.ClaimTask(reqctx(c), c.Param("taskID"), actor(c)); err != nil {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }
 func (a *api) agentSubmit(c *gin.Context) {
 	var in struct {
@@ -565,5 +612,5 @@ func (a *api) agentSubmit(c *gin.Context) {
 		bad(c, err)
 		return
 	}
-	c.JSON(200, gin.H{"ok": true})
+	success(c, 200, gin.H{"ok": true})
 }

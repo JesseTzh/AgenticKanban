@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"agentic-kanban/internal/auth"
@@ -26,6 +27,15 @@ import (
 
 func newRouter(t *testing.T) http.Handler {
 	t.Helper()
+	dist := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dist, "index.html"), []byte("<html>app</html>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return newRouterWithWebDist(t, dist)
+}
+
+func newRouterWithWebDist(t *testing.T, webDistPath string) http.Handler {
+	t.Helper()
 	database, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "test.db")+"?_pragma=foreign_keys(1)")
 	if err != nil {
 		t.Fatal(err)
@@ -35,7 +45,7 @@ func newRouter(t *testing.T) http.Handler {
 		t.Fatal(err)
 	}
 	st := store.New(database, slog.New(slog.NewTextHandler(os.Stdout, nil)))
-	cfg := config.Config{AppEnv: "test", HTTPAddr: ":0", SQLitePath: "", SessionSecret: "test-session", SessionTTL: 3600_000_000_000, AgentTokenSecret: "agent-secret", WebhookBaseURL: "http://example.test", LogLevel: "debug"}
+	cfg := config.Config{AppEnv: "test", HTTPAddr: ":0", SQLitePath: "", SessionSecret: "test-session", SessionTTL: 3600_000_000_000, AgentTokenSecret: "agent-secret", WebhookBaseURL: "http://example.test", WebDistPath: webDistPath, LogLevel: "debug"}
 	if err := auth.EnsureDefaultAdmin(context.Background(), st, "admin", "admin123", cfg.SessionSecret); err != nil {
 		t.Fatal(err)
 	}
@@ -50,6 +60,55 @@ func newRouter(t *testing.T) http.Handler {
 	return httpapi.NewRouter(httpapi.Dependencies{Config: cfg, Logger: slog.Default(), Store: st, Cache: c, Perm: p})
 }
 
+func TestStaticWebHosting(t *testing.T) {
+	dist := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dist, "assets"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dist, "index.html"), []byte("<html>app</html>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dist, "assets", "app.js"), []byte("console.log('app')"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r := newRouterWithWebDist(t, dist)
+
+	tests := []struct {
+		name        string
+		method      string
+		path        string
+		wantCode    int
+		wantBody    string
+		wantContent string
+	}{
+		{name: "root serves index", method: http.MethodGet, path: "/", wantCode: 200, wantBody: "<html>app</html>", wantContent: "text/html"},
+		{name: "nested frontend path serves index", method: http.MethodGet, path: "/projects/project-1", wantCode: 200, wantBody: "<html>app</html>", wantContent: "text/html"},
+		{name: "asset serves file", method: http.MethodGet, path: "/assets/app.js", wantCode: 200, wantBody: "console.log('app')", wantContent: "text/javascript"},
+		{name: "head asset serves headers", method: http.MethodHead, path: "/assets/app.js", wantCode: 200, wantBody: "", wantContent: "text/javascript"},
+		{name: "unknown api returns json not found", method: http.MethodGet, path: "/api/unknown", wantCode: 404, wantBody: `{"data":null,"error":{"code":"not_found","message":"not found"}}`, wantContent: "application/json"},
+		{name: "unknown post returns json not found", method: http.MethodPost, path: "/unknown", wantCode: 404, wantBody: `{"data":null,"error":{"code":"not_found","message":"not found"}}`, wantContent: "application/json"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, tt.path, nil)
+			rr := httptest.NewRecorder()
+
+			r.ServeHTTP(rr, req)
+
+			if rr.Code != tt.wantCode {
+				t.Fatalf("code=%d body=%s", rr.Code, rr.Body.String())
+			}
+			if rr.Body.String() != tt.wantBody {
+				t.Fatalf("body=%q", rr.Body.String())
+			}
+			if contentType := rr.Header().Get("Content-Type"); !strings.Contains(contentType, tt.wantContent) {
+				t.Fatalf("Content-Type=%q", contentType)
+			}
+		})
+	}
+}
+
 func doJSON(t *testing.T, h http.Handler, method, path string, body any, cookie *http.Cookie) (*httptest.ResponseRecorder, map[string]any) {
 	t.Helper()
 	b, _ := json.Marshal(body)
@@ -61,8 +120,70 @@ func doJSON(t *testing.T, h http.Handler, method, path string, body any, cookie 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	var out map[string]any
-	_ = json.Unmarshal(rr.Body.Bytes(), &out)
+	_ = json.Unmarshal(responseData(t, rr), &out)
 	return rr, out
+}
+
+func responseData(t *testing.T, rr *httptest.ResponseRecorder) json.RawMessage {
+	t.Helper()
+	var envelope struct {
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &envelope); err != nil {
+		t.Fatalf("decode envelope: %v body=%s", err, rr.Body.String())
+	}
+	return envelope.Data
+}
+
+func assertErrorEnvelope(t *testing.T, rr *httptest.ResponseRecorder, wantCode int, wantErrorCode, wantMessage string) {
+	t.Helper()
+	if rr.Code != wantCode {
+		t.Fatalf("code=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var envelope struct {
+		Data  any `json:"data"`
+		Error struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &envelope); err != nil {
+		t.Fatalf("decode envelope: %v body=%s", err, rr.Body.String())
+	}
+	if envelope.Data != nil || envelope.Error.Code != wantErrorCode || envelope.Error.Message != wantMessage {
+		t.Fatalf("body=%s", rr.Body.String())
+	}
+}
+
+func TestAPIEnvelopes(t *testing.T) {
+	r := newRouter(t)
+
+	rr, health := doJSON(t, r, http.MethodGet, "/api/health", nil, nil)
+	if rr.Code != 200 || health["ok"] != true {
+		t.Fatalf("health code=%d body=%s", rr.Code, rr.Body.String())
+	}
+
+	loginRR, _ := doJSON(t, r, http.MethodPost, "/api/auth/login", map[string]string{"username": "admin", "password": "admin123"}, nil)
+	if loginRR.Code != 200 {
+		t.Fatalf("login code=%d body=%s", loginRR.Code, loginRR.Body.String())
+	}
+	rr, _ = doJSON(t, r, http.MethodGet, "/api/projects", nil, loginRR.Result().Cookies()[0])
+	if rr.Code != 200 || string(responseData(t, rr)) != "[]" {
+		t.Fatalf("projects code=%d body=%s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestAPIAuthenticationErrorEnvelopes(t *testing.T) {
+	r := newRouter(t)
+
+	rr, _ := doJSON(t, r, http.MethodGet, "/api/projects", nil, nil)
+	assertErrorEnvelope(t, rr, 401, "unauthorized", "unauthorized")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/agent/tasks", nil)
+	req.Header.Set("Authorization", "Bearer invalid")
+	rr = httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	assertErrorEnvelope(t, rr, 401, "unauthorized", "unauthorized")
 }
 
 func TestFullHumanAndCommitFlow(t *testing.T) {
@@ -84,7 +205,7 @@ func TestFullHumanAndCommitFlow(t *testing.T) {
 		t.Fatalf("board code=%d", rr.Code)
 	}
 	var stages []domain.Stage
-	if err := json.Unmarshal(rr.Body.Bytes(), &stages); err != nil {
+	if err := json.Unmarshal(responseData(t, rr), &stages); err != nil {
 		t.Fatal(err)
 	}
 	if len(stages) != 6 {
@@ -108,6 +229,8 @@ func TestFullHumanAndCommitFlow(t *testing.T) {
 	}
 	repo := repoBody["repository"].(map[string]any)
 	webhookPath := "/api/webhooks/" + repo["ID"].(string) + "/" + repo["WebhookSecret"].(string)
+	rr, _ = doJSON(t, r, http.MethodPost, "/api/webhooks/"+repo["ID"].(string)+"/invalid", map[string]any{}, nil)
+	assertErrorEnvelope(t, rr, 401, "invalid_webhook_secret", "invalid webhook secret")
 	rr, _ = doJSON(t, r, http.MethodPost, webhookPath, map[string]any{"ref": "refs/heads/main", "commits": []map[string]any{{"id": "abc123", "message": "done", "author": map[string]string{"name": "dev"}}}}, nil)
 	if rr.Code != 200 {
 		t.Fatalf("webhook code=%d body=%s", rr.Code, rr.Body.String())
@@ -118,7 +241,7 @@ func TestFullHumanAndCommitFlow(t *testing.T) {
 		t.Fatalf("commits code=%d", rr.Code)
 	}
 	var commits []map[string]any
-	if err := json.Unmarshal(rr.Body.Bytes(), &commits); err != nil {
+	if err := json.Unmarshal(responseData(t, rr), &commits); err != nil {
 		t.Fatal(err)
 	}
 	if len(commits) != 1 {

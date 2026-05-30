@@ -1,18 +1,43 @@
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+import type { Archive, Commit, Project, Repository, Stage, Task } from '@/types'
+
+type APIEnvelope<T> = {
+  data: T | null
+  error: { code: string; message: string } | null
+}
+
+type LocationLike = {
+  href: string
+  pathname: string
+}
+
+export function redirectToLogin(location: LocationLike = window.location) {
+  if (location.pathname !== '/login') {
+    location.href = '/login'
+  }
+}
+
+export async function request<T>(path: string, init: RequestInit = {}, location: LocationLike = window.location): Promise<T> {
   const response = await fetch(path, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...(init.headers || {}) },
     ...init,
   })
+  let body: APIEnvelope<T> | undefined
+  try {
+    body = (await response.json()) as APIEnvelope<T>
+  } catch {}
   if (!response.ok) {
+    if (response.status === 401) {
+      redirectToLogin(location)
+    }
     let message = `${response.status} ${response.statusText}`
-    try {
-      const body = await response.json()
-      message = body.error || message
-    } catch {}
+    message = body?.error?.message || message
     throw new Error(message)
   }
-  return response.json() as Promise<T>
+  if (!body || !Object.prototype.hasOwnProperty.call(body, 'data')) {
+    throw new Error('invalid API response')
+  }
+  return body.data as T
 }
 
 export const api = {
@@ -40,4 +65,3 @@ export const api = {
     request(`/api/tasks/${taskID}/archives`, { method: 'POST', body: JSON.stringify({ Content }) }),
   archives: (projectID: string) => request<Archive[]>(`/api/projects/${projectID}/archives`),
 }
-import type { Archive, Commit, Project, Repository, Stage, Task } from '@/types'

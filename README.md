@@ -25,6 +25,10 @@ go run ./cmd/server
 
 访问：`http://localhost:8080`
 
+后端会从 `WEB_DIST_PATH` 托管前端构建产物，默认值为 `web/dist`。启动时
+必须存在该目录以及其中的 `index.html`，否则服务会直接退出。前端路由和
+静态资源由 Go 后端提供，`/api/*` 仍保留为 JSON API。
+
 ## Docker Compose
 
 部署环境要求：
@@ -69,6 +73,37 @@ SQLite 由 `modernc.org/sqlite v1.51.0` 提供，该驱动内嵌 SQLite `3.53.1`
 ```http
 Authorization: Bearer <token>
 ```
+
+## API 返回格式
+
+所有 `/api/*` JSON 接口，包括浏览器接口、Agent 接口、Webhook 和 API
+`404`，统一使用 envelope。该格式为破坏性变更，API 调用方需要从 `data`
+读取成功结果，并从 `error` 读取失败详情。
+
+成功响应：
+
+```json
+{
+  "data": {},
+  "error": null
+}
+```
+
+失败响应：
+
+```json
+{
+  "data": null,
+  "error": {
+    "code": "unauthorized",
+    "message": "unauthorized"
+  }
+}
+```
+
+HTTP 状态码继续表达请求结果，例如 `201`、`400`、`401`、`403`、`404`
+和 `409`。客户端应依据 HTTP 状态码或 `error.code` 分支处理，不应依赖
+`error.message`。
 
 ## 关键规则
 

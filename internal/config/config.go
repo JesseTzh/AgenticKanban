@@ -13,6 +13,7 @@ type Config struct {
 	SessionTTL       time.Duration
 	AgentTokenSecret string
 	WebhookBaseURL   string
+	WebDistPath      string
 	LogLevel         string
 }
 
@@ -25,6 +26,7 @@ func Load() Config {
 		SessionTTL:       durationEnv("SESSION_TTL", 24*time.Hour),
 		AgentTokenSecret: env("AGENT_TOKEN_SECRET", "dev-agent-token-secret-change-me"),
 		WebhookBaseURL:   env("WEBHOOK_BASE_URL", "http://localhost:8080"),
+		WebDistPath:      env("WEB_DIST_PATH", "web/dist"),
 		LogLevel:         env("LOG_LEVEL", "info"),
 	}
 }
