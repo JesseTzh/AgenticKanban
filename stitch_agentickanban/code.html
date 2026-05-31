@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AgenticKanban - SYSTEM_AUTHENTICATION</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&amp;family=Inter:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#1b2022",
+                        "on-tertiary-container": "#765e00",
+                        "on-surface-variant": "#bdc9cb",
+                        "on-background": "#dfe3e4",
+                        "tertiary-fixed-dim": "#e6c359",
+                        "surface-container-highest": "#303637",
+                        "secondary-fixed-dim": "#38d7ff",
+                        "tertiary-container": "#fed96c",
+                        "on-primary-fixed": "#001f24",
+                        "on-secondary": "#003642",
+                        "surface-container-high": "#262b2c",
+                        "on-primary-container": "#006b78",
+                        "primary-fixed-dim": "#69d5e8",
+                        "primary-fixed": "#9defff",
+                        "on-tertiary": "#3d2f00",
+                        "surface-bright": "#353a3b",
+                        "error-container": "#93000a",
+                        "outline-variant": "#3d494b",
+                        "on-error-container": "#ffdad6",
+                        "on-primary": "#00363d",
+                        "surface-variant": "#303637",
+                        "error": "#ffb4ab",
+                        "tertiary": "#fff8ef",
+                        "primary-container": "#81ecff",
+                        "inverse-on-surface": "#2c3132",
+                        "tertiary-fixed": "#ffe089",
+                        "inverse-surface": "#dfe3e4",
+                        "secondary-container": "#00d2fc",
+                        "secondary": "#a1e7ff",
+                        "background": "#0f1415",
+                        "on-primary-fixed-variant": "#004f59",
+                        "surface-dim": "#0f1415",
+                        "secondary-fixed": "#b3ebff",
+                        "inverse-primary": "#006875",
+                        "on-tertiary-fixed": "#241a00",
+                        "on-error": "#690005",
+                        "surface": "#0f1415",
+                        "on-tertiary-fixed-variant": "#574500",
+                        "on-secondary-container": "#005669",
+                        "surface-container-lowest": "#0a0f10",
+                        "on-surface": "#dfe3e4",
+                        "on-secondary-fixed": "#001f27",
+                        "outline": "#879395",
+                        "surface-container-low": "#171c1d",
+                        "on-secondary-fixed-variant": "#004e5f",
+                        "primary": "#edfcff",
+                        "surface-tint": "#69d5e8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-desktop": "32px",
+                        "unit": "8px",
+                        "margin-mobile": "16px",
+                        "gutter": "16px",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Space Grotesk"],
+                        "display-lg": ["Space Grotesk"],
+                        "headline-lg": ["Space Grotesk"],
+                        "headline-sm": ["Space Grotesk"],
+                        "label-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg-mobile": ["Space Grotesk"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "500"}],
+                        "display-lg": ["72px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "700"}],
+                        "headline-lg": ["40px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "headline-sm": ["24px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "500"}],
+                        "label-md": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "letterSpacing": "0em", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .blueprint-grid {
+            background-color: #0e0e0e;
+            background-image: 
+                linear-gradient(to right, rgba(129, 236, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(129, 236, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        
+        .ambient-glow {
+            background: radial-gradient(circle at 50% 50%, rgba(129, 236, 255, 0.1) 0%, transparent 60%);
+        }
+
+        /* Carousel Styles */
+        .carousel-container {
+            perspective: 1200px;
+            transform-style: preserve-3d;
+        }
+        
+        .stage-card {
+            transition: all 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+            position: absolute;
+            width: 280px;
+            height: 420px;
+            left: 50%;
+            top: 50%;
+            margin-left: -140px;
+            margin-top: -210px;
+            border-radius: 8px;
+            background: rgba(23, 28, 29, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(135, 147, 149, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .stage-active {
+            transform: translateZ(0) scale(1.1);
+            opacity: 1;
+            z-index: 10;
+            border-color: rgba(129, 236, 255, 0.5);
+            box-shadow: 0 0 30px rgba(129, 236, 255, 0.1);
+        }
+
+        .stage-next-1 {
+            transform: translateX(250px) translateZ(-100px) scale(0.9);
+            opacity: 0.6;
+            z-index: 9;
+        }
+
+        .stage-next-2 {
+            transform: translateX(440px) translateZ(-200px) scale(0.75);
+            opacity: 0.3;
+            z-index: 8;
+        }
+
+        .stage-prev-1 {
+            transform: translateX(-250px) translateZ(-100px) scale(0.9);
+            opacity: 0.6;
+            z-index: 9;
+        }
+
+        .stage-prev-2 {
+            transform: translateX(-440px) translateZ(-200px) scale(0.75);
+            opacity: 0.3;
+            z-index: 8;
+        }
+
+        .task-item {
+            transition: all 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Unified Kinetic Card Animation */
+        .kinetic-card {
+            border-color: #00d2fc !important;
+            box-shadow: 0 0 10px rgba(0, 210, 252, 0.3);
+            animation: pulse-border 2s infinite;
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 5px rgba(0, 210, 252, 0.2); border-color: rgba(0, 210, 252, 0.5) !important; }
+            50% { box-shadow: 0 0 15px rgba(0, 210, 252, 0.6); border-color: #00d2fc !important; }
+            100% { box-shadow: 0 0 5px rgba(0, 210, 252, 0.2); border-color: rgba(0, 210, 252, 0.5) !important; }
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+        .spin-slow {
+            animation: spin 3s linear infinite;
+        }
+
+        /* AI Processing Effects */
+        .ai-scanning {
+            position: relative;
+            overflow: hidden;
+        }
+        .ai-scanning::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 210, 252, 0.4), transparent);
+            animation: scan 1s infinite;
+        }
+        @keyframes scan {
+            0% { left: -100%; }
+            100% { left: 200%; }
+        }
+        
+        .code-stream {
+            font-family: monospace;
+            font-size: 8px;
+            color: #00d2fc;
+            line-height: 1;
+            opacity: 0.8;
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+        }
+        
+        .ai-processing-indicator {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            text-shadow: 0 0 5px rgba(0, 210, 252, 0.8);
+        }
+        .ai-scanning .ai-processing-indicator {
+            opacity: 1;
+            animation: pulse-glow 1.5s infinite;
+        }
+        
+        @keyframes pulse-glow {
+            0% { opacity: 0.7; text-shadow: 0 0 2px rgba(0, 210, 252, 0.5); }
+            50% { opacity: 1; text-shadow: 0 0 10px rgba(0, 210, 252, 1); }
+            100% { opacity: 0.7; text-shadow: 0 0 2px rgba(0, 210, 252, 0.5); }
+        }
+
+        /* Human Verification Effects */
+        .human-verify {
+            animation: verify-pulse 0.5s ease-out forwards;
+        }
+        @keyframes verify-pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .verify-icon {
+            color: #10b981; /* Emerald */
+            animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes pop-in {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="text-on-surface min-h-screen flex flex-col relative overflow-hidden blueprint-grid font-body-md">
+<!-- Ambient Glow Background -->
+<div class="absolute inset-0 ambient-glow pointer-events-none z-0"></div>
+<!-- Full Screen: Brand Context & Kanban Carousel -->
+<div class="w-full min-h-screen flex flex-col justify-center p-8 lg:p-16 relative z-10 overflow-hidden">
+<!-- Carousel Container -->
+<div class="flex-1 w-full flex items-center justify-center relative carousel-container mt-16 mb-8" id="carousel">
+<!-- Stages will be populated by JS -->
+</div>
+</div>
+<script>
+        // Carousel Kanban Logic
+        const stagesData = [
+            { id: 'req', title: 'Requirement Refinement', subtitle: '需求澄清', color: 'text-primary-fixed-dim', bg: 'bg-primary-fixed-dim', border: 'border-primary-fixed-dim/50', icon: 'psychology', type: 'standard', sampleTasks: ['AK-801: Database Schema Spec', 'AK-802: Edge Case Analysis'] },
+            { id: 'tech', title: 'Technical Breakdown', subtitle: '技术拆解', color: 'text-secondary-fixed-dim', bg: 'bg-secondary-fixed-dim', border: 'border-secondary-fixed-dim/50', icon: 'account_tree', type: 'standard', sampleTasks: ['AK-914: Microservice Architecture', 'AK-915: API Protocol Mapping'] },
+            { id: 'impl', title: 'Implementation', subtitle: '开发执行', color: 'text-secondary-container', bg: 'bg-secondary-container', border: 'border-secondary-container/50', icon: 'terminal', type: 'execution', sampleTasks: ['AK-1024: Logic Core Refactor', 'AK-1025: Auth Middleware Hook'] },
+            { id: 'review', title: 'Code Review', subtitle: '代码复核', color: 'text-tertiary-fixed-dim', bg: 'bg-tertiary-fixed-dim', border: 'border-tertiary-fixed-dim/50', icon: 'fact_check', type: 'verification', sampleTasks: ['AK-1130: PR: Security Hardening', 'AK-1131: Code Optimization v2'] },
+            { id: 'qa', title: 'QA Validation', subtitle: '测试验收', color: 'text-primary-container', bg: 'bg-primary-container', border: 'border-primary-container/50', icon: 'verified', type: 'verification', sampleTasks: ['AK-1200: Regression Test Suite', 'AK-1201: UX Performance Audit'] }
+        ];
+
+        const carousel = document.getElementById('carousel');
+        let activeIndex = 0;
+
+        // Initialize Carousel DOM
+        stagesData.forEach((stage, index) => {
+            const card = document.createElement('div');
+            card.className = `stage-card flex flex-col p-5`;
+            card.id = `stage-${index}`;
+            
+            let extraGlow = stage.type === 'execution' ? '<div class="absolute inset-0 bg-secondary-container/5 pointer-events-none mix-blend-screen"></div>' : '';
+            
+            card.innerHTML = `
+                ${extraGlow}
+                <div class="flex items-center gap-3 border-b border-outline-variant/30 pb-4 mb-4 relative z-10">
+                    <span class="material-symbols-outlined ${stage.color}">${stage.icon}</span>
+                    <div class="flex flex-col">
+                        <span class="font-label-md text-[10px] text-outline uppercase tracking-wider">${stage.subtitle}</span>
+                        <h3 class="font-headline-sm text-[16px] text-on-surface">${stage.title}</h3>
+                    </div>
+                </div>
+                <div class="flex-1 flex flex-col gap-3 relative overflow-hidden p-1" id="tasks-${index}">
+                    <!-- Tasks injected here -->
+                </div>
+            `;
+            carousel.appendChild(card);
+        });
+
+        const updateCarouselClasses = () => {
+            const cards = document.querySelectorAll('.stage-card');
+            cards.forEach((card, index) => {
+                card.className = 'stage-card'; // reset
+                
+                let diff = (index - activeIndex + 5) % 5;
+                
+                if (diff === 0) {
+                    card.classList.add('stage-active');
+                    card.style.borderColor = `var(--tw-colors-${stagesData[index].color.replace('text-', '')})`;
+                } else if (diff === 1) {
+                    card.classList.add('stage-next-1');
+                    card.style.borderColor = '';
+                } else if (diff === 2) {
+                    card.classList.add('stage-next-2');
+                    card.style.borderColor = '';
+                } else if (diff === 3) {
+                    card.classList.add('stage-prev-2');
+                    card.style.borderColor = '';
+                } else if (diff === 4) {
+                    card.classList.add('stage-prev-1');
+                    card.style.borderColor = '';
+                }
+            });
+        };
+
+        const createTaskHTML = (stageIndex, specificId = null) => {
+            const stage = stagesData[stageIndex];
+            const id = specificId || stage.sampleTasks[Math.floor(Math.random() * stage.sampleTasks.length)];
+            
+            let wrapperClass = 'task-item bg-surface-container-high border border-outline-variant/30 rounded p-3 flex flex-col gap-2 kinetic-card';
+            
+            let contentHTML = `
+                <div class="flex justify-between items-center mb-1 relative z-10">
+                    <span class="font-label-md text-[11px] font-bold text-on-surface-variant task-id-label truncate pr-2" title="${id}">${id}</span>
+                    <span class="material-symbols-outlined text-[14px] ${stage.color} spin-slow task-icon flex-shrink-0">autorenew</span>
+                </div>
+                <div class="flex items-center gap-2 relative z-10">
+                    <div class="h-1 bg-surface-variant rounded-full overflow-hidden flex-1 relative progress-bar">
+                        <div class="h-full ${stage.bg} progress-fill" style="width: ${Math.floor(Math.random() * 60 + 20)}%"></div>
+                    </div>
+                    <div class="ai-processing-indicator flex items-center gap-1 text-secondary-container">
+                        <span class="material-symbols-outlined text-[12px]">smart_toy</span>
+                        <span class="font-headline-sm text-[8px] uppercase tracking-wider whitespace-nowrap">AI Agent</span>
+                    </div>
+                </div>
+                <div class="code-stream hidden"></div>
+            `;
+
+            return `<div class="${wrapperClass}" data-task-id="${id}">${contentHTML}</div>`;
+        };
+
+        // Populate initial tasks sparsely
+        stagesData.forEach((stage, index) => {
+            const container = document.getElementById(`tasks-${index}`);
+            if (index < 2) {
+                container.insertAdjacentHTML('afterbegin', createTaskHTML(index, stage.sampleTasks[1]));
+                container.insertAdjacentHTML('afterbegin', createTaskHTML(index, stage.sampleTasks[0]));
+            }
+        });
+
+        updateCarouselClasses();
+
+        // Data string generator for AI effect
+        const randomHex = () => Math.floor(Math.random()*16777215).toString(16).padStart(6, '0').toUpperCase();
+
+        // Phase orchestrator
+        const runTaskCycle = () => {
+            const prevIndex = activeIndex;
+            const sourceContainer = document.getElementById(`tasks-${prevIndex}`);
+            
+            if (sourceContainer.children.length === 0) {
+                shiftCarousel();
+                return;
+            }
+
+            const taskToProcess = sourceContainer.lastElementChild;
+            const taskId = taskToProcess.getAttribute('data-task-id');
+            
+            // If we are at the end, just fade out and shift
+            if (prevIndex === 4) {
+                 taskToProcess.style.opacity = '0';
+                 setTimeout(() => {
+                     if (sourceContainer.contains(taskToProcess)) {
+                         sourceContainer.removeChild(taskToProcess);
+                     }
+                 }, 1500);
+                 shiftCarousel();
+                 return;
+            }
+
+            // PHASE 1: AI Processing
+            taskToProcess.classList.add('ai-scanning');
+            const codeStream = taskToProcess.querySelector('.code-stream');
+            codeStream.classList.remove('hidden');
+            
+            let streamInterval = setInterval(() => {
+                codeStream.innerText = `0x${randomHex()} 0x${randomHex()}`;
+            }, 100);
+            
+            taskToProcess.querySelector('.progress-fill').style.width = '100%';
+            taskToProcess.querySelector('.progress-fill').style.transition = 'width 1.5s ease-in-out';
+            taskToProcess.querySelector('.task-icon').innerText = 'memory';
+            taskToProcess.querySelector('.task-icon').classList.remove('spin-slow');
+            taskToProcess.querySelector('.task-icon').classList.add('animate-pulse');
+
+
+            setTimeout(() => {
+                // End Phase 1
+                clearInterval(streamInterval);
+                taskToProcess.classList.remove('ai-scanning');
+                codeStream.classList.add('hidden');
+                
+                // PHASE 2: Human Verification
+                taskToProcess.classList.add('human-verify');
+                taskToProcess.style.borderColor = '#10b981'; // Emerald
+                taskToProcess.querySelector('.task-icon').innerText = 'check_circle';
+                taskToProcess.querySelector('.task-icon').className = 'material-symbols-outlined text-[14px] verify-icon task-icon flex-shrink-0';
+                
+                setTimeout(() => {
+                    // PHASE 3: Transition & Carousel Shift
+                    
+                    // Setup Transition Animation
+                    const destIndex = (prevIndex + 1) % 5;
+                    const destContainer = document.getElementById(`tasks-${destIndex}`);
+                    
+                    taskToProcess.style.transform = 'translateX(280px)';
+                    taskToProcess.style.opacity = '0';
+                    
+                    // Create new in destination
+                    destContainer.insertAdjacentHTML('afterbegin', createTaskHTML(destIndex, taskId));
+                    const newTask = destContainer.firstElementChild;
+                    
+                    newTask.style.transform = 'translateX(-280px)';
+                    newTask.style.opacity = '0';
+                    
+                    void newTask.offsetWidth; // Reflow
+                    
+                    newTask.style.transform = 'translateX(0)';
+                    newTask.style.opacity = '1';
+                    
+                    setTimeout(() => {
+                        if (sourceContainer.contains(taskToProcess)) {
+                            sourceContainer.removeChild(taskToProcess);
+                        }
+                        if (destContainer.children.length > 3) {
+                            const oldestTask = destContainer.lastElementChild;
+                            oldestTask.style.opacity = '0';
+                            setTimeout(() => {
+                                if (destContainer.contains(oldestTask)) {
+                                    destContainer.removeChild(oldestTask);
+                                }
+                            }, 1500);
+                        }
+                    }, 1500);
+                    
+                    shiftCarousel();
+
+                }, 1000); // Wait 1s for verification effect
+
+            }, 2000); // AI processes for 2s
+
+        };
+
+        const shiftCarousel = () => {
+             activeIndex = (activeIndex + 1) % 5;
+             updateCarouselClasses();
+             
+             // Generate new tasks entering stage 1
+             if (activeIndex === 0 && Math.random() > 0.5) {
+                 setTimeout(() => {
+                    const startContainer = document.getElementById(`tasks-0`);
+                    if (startContainer.children.length < 3) {
+                        startContainer.insertAdjacentHTML('afterbegin', createTaskHTML(0));
+                        const addedTask = startContainer.firstElementChild;
+                        addedTask.style.transform = 'translateX(-280px)';
+                        addedTask.style.opacity = '0';
+                        void addedTask.offsetWidth;
+                        addedTask.style.transform = 'translateX(0)';
+                        addedTask.style.opacity = '1';
+                    }
+                 }, 2000);
+            }
+        }
+
+        // Start Orchestration Loop
+        // Total cycle is ~5.5 seconds if processing, else faster. Set interval accordingly to give enough time.
+        setInterval(runTaskCycle, 6000); 
+
+    </script>
+</body></html>
