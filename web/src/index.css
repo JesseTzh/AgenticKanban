@@ -4,25 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(0.985 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  color-scheme: light;
 }
 
 @theme inline {
@@ -48,6 +30,18 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-surface-low: var(--surface-low);
+  --color-surface-high: var(--surface-high);
+  --color-surface-bright: var(--surface-bright);
+  --color-glass: var(--glass);
+  --color-outline: var(--outline);
+  --shadow-card: var(--material-shadow-card);
+  --shadow-dialog: var(--material-shadow-dialog);
+  --shadow-menu: var(--material-shadow-menu);
+  --shadow-input: var(--material-shadow-input);
+  --shadow-button-hover: var(--material-shadow-button-hover);
+  --font-sans: var(--material-font-sans);
+  --font-mono: var(--material-font-mono);
 }
 
 @layer base {
@@ -56,6 +50,24 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+}
+
+@layer components {
+  .material-card {
+    @apply bg-glass shadow-card outline outline-1 outline-outline backdrop-blur-[20px];
+  }
+
+  .material-panel {
+    @apply bg-surface-low outline outline-1 outline-outline;
+  }
+
+  .precision-progress {
+    @apply h-px overflow-hidden bg-muted;
+  }
+
+  .precision-progress::after {
+    @apply block h-full w-1/2 animate-pulse bg-primary content-[''];
   }
 }

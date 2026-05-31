@@ -16,29 +16,29 @@ export function TaskCard({ projectID, task }: { projectID: string; task: Task })
   })
   const move = (StageKey: string) => mutation.mutate(() => api.transitionTask(task.ID, { StageKey, Status: 'agentic_ready', Reason: '前端操作' }))
   return (
-    <Card className="gap-3 py-4">
-      <CardHeader className="px-4">
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-sm">{task.Title}</CardTitle>
+    <Card className="gap-3 py-4 transition-[background-color,box-shadow] hover:bg-surface-bright hover:shadow-button-hover" data-test-id={`task-card-${task.ID}`}>
+      <CardHeader className="px-4" data-test-id={`task-card-header-${task.ID}`}>
+        <div className="flex items-start justify-between gap-2" data-test-id={`task-card-title-row-${task.ID}`}>
+          <CardTitle className="text-sm" data-test-id={`task-card-title-${task.ID}`}>{task.Title}</CardTitle>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild><Button aria-label="任务操作" size="icon" variant="ghost"><Ellipsis className="size-4" /></Button></DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>流转任务</DropdownMenuLabel>
-              <DropdownMenuItem onSelect={() => move('technical_breakdown')}>到技术拆解</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => move('development_execution')}>到开发执行</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => move('code_review')}>到代码复核</DropdownMenuItem>
+            <DropdownMenuTrigger asChild><Button aria-label="任务操作" data-test-id={`task-actions-${task.ID}`} size="icon" variant="ghost"><Ellipsis className="size-4" /></Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end" data-test-id={`task-menu-${task.ID}`}>
+              <DropdownMenuLabel data-test-id={`task-menu-label-${task.ID}`}>流转任务</DropdownMenuLabel>
+              <DropdownMenuItem data-test-id={`task-move-technical-breakdown-${task.ID}`} onSelect={() => move('technical_breakdown')}>到技术拆解</DropdownMenuItem>
+              <DropdownMenuItem data-test-id={`task-move-development-execution-${task.ID}`} onSelect={() => move('development_execution')}>到开发执行</DropdownMenuItem>
+              <DropdownMenuItem data-test-id={`task-move-code-review-${task.ID}`} onSelect={() => move('code_review')}>到代码复核</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => mutation.mutate(() => api.review(task.ID, { Verdict: 'approved', Note: '通过' }))}>复核通过</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => mutation.mutate(() => api.testRecord(task.ID, { Verdict: 'failed', Note: '测试失败' }))}>测试失败</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => mutation.mutate(() => api.testRecord(task.ID, { Verdict: 'passed', Note: '通过' }))}>测试通过</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => mutation.mutate(() => api.createArchive(task.ID, `# ${task.Title}\n\n完成归档。`))}>生成归档</DropdownMenuItem>
+              <DropdownMenuItem data-test-id={`task-review-approved-${task.ID}`} onSelect={() => mutation.mutate(() => api.review(task.ID, { Verdict: 'approved', Note: '通过' }))}>复核通过</DropdownMenuItem>
+              <DropdownMenuItem data-test-id={`task-test-failed-${task.ID}`} onSelect={() => mutation.mutate(() => api.testRecord(task.ID, { Verdict: 'failed', Note: '测试失败' }))}>测试失败</DropdownMenuItem>
+              <DropdownMenuItem data-test-id={`task-test-passed-${task.ID}`} onSelect={() => mutation.mutate(() => api.testRecord(task.ID, { Verdict: 'passed', Note: '通过' }))}>测试通过</DropdownMenuItem>
+              <DropdownMenuItem data-test-id={`task-create-archive-${task.ID}`} onSelect={() => mutation.mutate(() => api.createArchive(task.ID, `# ${task.Title}\n\n完成归档。`))}>生成归档</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 px-4">
-        <div className="flex flex-wrap gap-2"><Badge variant="secondary">{task.Status}</Badge>{task.Locked ? <Badge variant="outline"><LockKeyhole className="size-3" />已锁定</Badge> : null}</div>
-        {task.Description ? <p className="text-xs text-muted-foreground">{task.Description}</p> : null}
+      <CardContent className="space-y-3 px-4" data-test-id={`task-card-content-${task.ID}`}>
+        <div className="flex flex-wrap gap-2" data-test-id={`task-card-badges-${task.ID}`}><Badge data-test-id={`task-status-${task.ID}`} variant="secondary">{task.Status}</Badge>{task.Locked ? <Badge data-test-id={`task-lock-${task.ID}`} variant="outline"><LockKeyhole className="size-3" />已锁定</Badge> : null}</div>
+        {task.Description ? <p className="text-xs text-muted-foreground" data-test-id={`task-description-${task.ID}`}>{task.Description}</p> : null}
       </CardContent>
     </Card>
   )

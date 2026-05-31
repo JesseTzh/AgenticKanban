@@ -24,20 +24,20 @@ export function CreateProjectDialog() {
   return (
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
-        <Button><Plus className="size-4" />新建项目</Button>
+        <Button data-test-id="create-project-open"><Plus className="size-4" />新建项目</Button>
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>新建项目</DialogTitle>
-          <DialogDescription>创建项目后会生成默认 AgenticKanban 工作流。</DialogDescription>
+      <DialogContent data-test-id="create-project-dialog">
+        <DialogHeader data-test-id="create-project-header">
+          <DialogTitle data-test-id="create-project-title">新建项目</DialogTitle>
+          <DialogDescription data-test-id="create-project-description">创建项目后会生成默认 AgenticKanban 工作流。</DialogDescription>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}>
-          <div className="space-y-2">
-            <Label htmlFor="project-name">项目名称</Label>
-            <Input id="project-name" onChange={(event) => setName(event.target.value)} required value={name} />
+        <form className="space-y-4" data-test-id="create-project-form" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}>
+          <div className="space-y-2" data-test-id="create-project-name-field">
+            <Label data-test-id="create-project-name-label" htmlFor="project-name">项目名称</Label>
+            <Input data-test-id="create-project-name" id="project-name" onChange={(event) => setName(event.target.value)} required value={name} />
           </div>
-          <DialogFooter>
-            <Button disabled={mutation.isPending} type="submit">{mutation.isPending ? '创建中...' : '创建项目'}</Button>
+          <DialogFooter data-test-id="create-project-footer">
+            <Button data-test-id="create-project-submit" disabled={mutation.isPending} type="submit">{mutation.isPending ? '创建中...' : '创建项目'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -22,12 +22,12 @@ export function CreateTaskDialog({ projectID }: { projectID: string }) {
   })
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger asChild><Button><Plus className="size-4" />创建任务</Button></DialogTrigger>
-      <DialogContent>
-        <DialogHeader><DialogTitle>创建需求任务</DialogTitle><DialogDescription>任务会进入需求澄清阶段。</DialogDescription></DialogHeader>
-        <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}>
-          <div className="space-y-2"><Label htmlFor="task-title">任务标题</Label><Input id="task-title" onChange={(event) => setTitle(event.target.value)} required value={title} /></div>
-          <DialogFooter><Button disabled={mutation.isPending} type="submit">创建任务</Button></DialogFooter>
+      <DialogTrigger asChild><Button data-test-id="create-task-open"><Plus className="size-4" />创建任务</Button></DialogTrigger>
+      <DialogContent data-test-id="create-task-dialog">
+        <DialogHeader data-test-id="create-task-header"><DialogTitle data-test-id="create-task-dialog-title">创建需求任务</DialogTitle><DialogDescription data-test-id="create-task-description">任务会进入需求澄清阶段。</DialogDescription></DialogHeader>
+        <form className="space-y-4" data-test-id="create-task-form" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}>
+          <div className="space-y-2" data-test-id="create-task-title-field"><Label data-test-id="create-task-title-label" htmlFor="task-title">任务标题</Label><Input data-test-id="create-task-title" id="task-title" onChange={(event) => setTitle(event.target.value)} required value={title} /></div>
+          <DialogFooter data-test-id="create-task-footer"><Button data-test-id="create-task-submit" disabled={mutation.isPending} type="submit">创建任务</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
