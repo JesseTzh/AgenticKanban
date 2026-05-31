@@ -301,7 +301,7 @@ func (s *Store) ApproveTask(ctx context.Context, id, actor, decision, note strin
 	toStage, toStatus := t.StageKey, domain.StatusAgenticReady
 	if decision == "approved" {
 		toStatus = domain.StatusAgenticReady
-		if t.StageKey == domain.StageDevelopmentExecution {
+		if t.StageKey == domain.StageTechnicalBreakdown {
 			toStage = domain.StageCodeReview
 		}
 	}
@@ -471,7 +471,7 @@ func (s *Store) CreateReview(ctx context.Context, taskID, verdict, note, actor s
 	if verdict == domain.ReviewApproved {
 		return s.TransitionTask(ctx, taskID, domain.StageTestAcceptance, domain.StatusAgenticReady, actor, "review approved")
 	}
-	return s.TransitionTask(ctx, taskID, domain.StageDevelopmentExecution, domain.StatusNeedsChanges, actor, "review rejected")
+	return s.TransitionTask(ctx, taskID, domain.StageTechnicalBreakdown, domain.StatusNeedsChanges, actor, "review rejected")
 }
 func (s *Store) CreateTestRecord(ctx context.Context, taskID, verdict, note, actor string) (string, error) {
 	_, err := s.db.ExecContext(ctx, `INSERT INTO test_records(id,task_id,verdict,note,tester_id) VALUES(?,?,?,?,?)`, utils.NewID("tst"), taskID, verdict, note, actor)
@@ -485,8 +485,8 @@ func (s *Store) CreateTestRecord(ctx context.Context, taskID, verdict, note, act
 	if err != nil {
 		return "", err
 	}
-	defect, _ := s.CreateTask(ctx, domain.Task{ProjectID: parent.ProjectID, ParentID: taskID, Title: "缺陷修复：" + parent.Title, Description: note, StageKey: domain.StageDevelopmentExecution, Status: domain.StatusAgenticReady}, actor)
-	return defect.ID, s.TransitionTask(ctx, taskID, domain.StageDevelopmentExecution, domain.StatusNeedsChanges, actor, "test failed")
+	defect, _ := s.CreateTask(ctx, domain.Task{ProjectID: parent.ProjectID, ParentID: taskID, Title: "缺陷修复：" + parent.Title, Description: note, StageKey: domain.StageTechnicalBreakdown, Status: domain.StatusAgenticReady}, actor)
+	return defect.ID, s.TransitionTask(ctx, taskID, domain.StageTechnicalBreakdown, domain.StatusNeedsChanges, actor, "test failed")
 }
 func (s *Store) CreateArchive(ctx context.Context, taskID, content, actor string) (domain.Archive, error) {
 	var ver int

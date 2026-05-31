@@ -55,7 +55,6 @@ describe('admin application', () => {
 
     expect(screen.getByTestId('login-workflow-stage-requirements')).toBeInTheDocument()
     expect(screen.getByTestId('login-workflow-stage-breakdown')).toBeInTheDocument()
-    expect(screen.getByTestId('login-workflow-stage-implementation')).toBeInTheDocument()
     expect(screen.getByTestId('login-workflow-stage-review')).toBeInTheDocument()
     expect(screen.getByTestId('login-workflow-stage-qa')).toBeInTheDocument()
   })

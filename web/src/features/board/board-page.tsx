@@ -17,7 +17,7 @@ export function BoardPage() {
   return (
     <AdminShell projectID={projectID} title="任务看板">
       <div className="mb-6 flex items-center justify-between" data-test-id="board-heading">
-        <div data-test-id="board-heading-copy"><h2 className="text-2xl font-semibold" data-test-id="board-title">任务工作流</h2><p className="text-sm text-muted-foreground" data-test-id="board-description">沿六个阶段推进任务并记录复核、测试和归档结果。</p></div>
+        <div data-test-id="board-heading-copy"><h2 className="text-2xl font-semibold" data-test-id="board-title">任务工作流</h2><p className="text-sm text-muted-foreground" data-test-id="board-description">沿五个阶段推进任务并记录审核、测试和归档结果。</p></div>
         <CreateTaskDialog projectID={projectID} />
       </div>
       <ErrorAlert error={stages.error || tasks.error} />

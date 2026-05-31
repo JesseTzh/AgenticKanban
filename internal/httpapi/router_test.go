@@ -244,11 +244,11 @@ func TestFullHumanAndCommitFlow(t *testing.T) {
 	if err := json.Unmarshal(responseData(t, rr), &stages); err != nil {
 		t.Fatal(err)
 	}
-	if len(stages) != 6 {
+	if len(stages) != 5 {
 		t.Fatalf("stages=%d", len(stages))
 	}
 
-	rr, taskBody := doJSON(t, r, http.MethodPost, "/api/projects/"+projectID+"/tasks", map[string]any{"Title": "Build feature", "StageKey": "development_execution", "Status": "agentic_ready"}, cookie)
+	rr, taskBody := doJSON(t, r, http.MethodPost, "/api/projects/"+projectID+"/tasks", map[string]any{"Title": "Build feature", "StageKey": "technical_breakdown", "Status": "agentic_ready"}, cookie)
 	if rr.Code != 201 {
 		t.Fatalf("create task code=%d body=%s", rr.Code, rr.Body.String())
 	}

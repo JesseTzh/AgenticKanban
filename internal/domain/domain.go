@@ -7,7 +7,6 @@ const (
 
 	StageRequirementClarification = "requirement_clarification"
 	StageTechnicalBreakdown       = "technical_breakdown"
-	StageDevelopmentExecution     = "development_execution"
 	StageCodeReview               = "code_review"
 	StageTestAcceptance           = "test_acceptance"
 	StageDoneArchive              = "done_archive"
@@ -61,10 +60,9 @@ func DefaultStages() []Stage {
 	return []Stage{
 		{StageRequirementClarification, "需求澄清", 1},
 		{StageTechnicalBreakdown, "技术拆解", 2},
-		{StageDevelopmentExecution, "开发执行", 3},
-		{StageCodeReview, "代码复核", 4},
-		{StageTestAcceptance, "测试验收", 5},
-		{StageDoneArchive, "完成归档", 6},
+		{StageCodeReview, "代码审核", 3},
+		{StageTestAcceptance, "测试验收", 4},
+		{StageDoneArchive, "完成归档", 5},
 	}
 }
 

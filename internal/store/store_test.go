@@ -40,7 +40,7 @@ func TestProjectCreatesDefaultBoard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := len(stages), 6; got != want {
+	if got, want := len(stages), 5; got != want {
 		t.Fatalf("stages=%d want=%d", got, want)
 	}
 }
@@ -49,13 +49,55 @@ func TestCodeReviewRequiresCommit(t *testing.T) {
 	st := newTestStore(t)
 	ctx := context.Background()
 	p, _ := st.CreateProject(ctx, "demo", "", "u")
-	task, err := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "dev", StageKey: domain.StageDevelopmentExecution, Status: domain.StatusAgenticReady}, "u")
+	task, err := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "dev", StageKey: domain.StageTechnicalBreakdown, Status: domain.StatusAgenticReady}, "u")
 	if err != nil {
 		t.Fatal(err)
 	}
 	err = st.TransitionTask(ctx, task.ID, domain.StageCodeReview, domain.StatusAgenticReady, "u", "try review")
 	if err != store.ErrCommitRequired {
 		t.Fatalf("err=%v want ErrCommitRequired", err)
+	}
+}
+
+func TestApprovedTechnicalBreakdownMovesToCodeReview(t *testing.T) {
+	st := newTestStore(t)
+	ctx := context.Background()
+	p, _ := st.CreateProject(ctx, "demo", "", "u")
+	task, _ := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "dev", StageKey: domain.StageTechnicalBreakdown, Status: domain.StatusPendingConfirmation}, "u")
+	repo, _ := st.CreateRepository(ctx, domain.Repository{ProjectID: p.ID, Name: "main"}, "u")
+	commit := domain.Commit{ID: "commit-1", SHA: "abc123", Message: "done", Author: "u", Branch: "main"}
+	if err := st.SaveWebhookEventAndCommits(ctx, repo, "", nil, []domain.Commit{commit}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.LinkCommit(ctx, task.ID, commit.ID, "u"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.ApproveTask(ctx, task.ID, "u", "approved", "done"); err != nil {
+		t.Fatal(err)
+	}
+	task, err := st.GetTask(ctx, task.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if task.StageKey != domain.StageCodeReview {
+		t.Fatalf("stage=%s", task.StageKey)
+	}
+}
+
+func TestRejectedCodeReviewMovesToTechnicalBreakdown(t *testing.T) {
+	st := newTestStore(t)
+	ctx := context.Background()
+	p, _ := st.CreateProject(ctx, "demo", "", "u")
+	task, _ := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "dev", StageKey: domain.StageCodeReview, Status: domain.StatusAgenticReady}, "u")
+	if err := st.CreateReview(ctx, task.ID, domain.ReviewRejected, "changes needed", "reviewer"); err != nil {
+		t.Fatal(err)
+	}
+	task, err := st.GetTask(ctx, task.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if task.StageKey != domain.StageTechnicalBreakdown {
+		t.Fatalf("stage=%s", task.StageKey)
 	}
 }
 
@@ -78,7 +120,14 @@ func TestTestFailureCreatesDefectTask(t *testing.T) {
 	if defect.ParentID != task.ID {
 		t.Fatalf("defect parent=%s want=%s", defect.ParentID, task.ID)
 	}
-	if defect.StageKey != domain.StageDevelopmentExecution {
+	if defect.StageKey != domain.StageTechnicalBreakdown {
 		t.Fatalf("stage=%s", defect.StageKey)
+	}
+	task, err = st.GetTask(ctx, task.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if task.StageKey != domain.StageTechnicalBreakdown {
+		t.Fatalf("parent stage=%s", task.StageKey)
 	}
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ComponentType, type SVGProps } from 'react'
-import { BadgeCheck, BrainCircuit, CheckCircle2, Cpu, GitBranch, RefreshCw, ScanSearch, Terminal } from 'lucide-react'
+import { BadgeCheck, BrainCircuit, CheckCircle2, Cpu, GitBranch, RefreshCw, ScanSearch } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
@@ -20,15 +20,13 @@ const reducedMotionQuery = '(prefers-reduced-motion: reduce)'
 const stages: WorkflowStage[] = [
   { id: 'requirements', title: 'Requirement Refinement', subtitle: '需求澄清', icon: BrainCircuit, accent: 'login-showcase-accent-primary' },
   { id: 'breakdown', title: 'Technical Breakdown', subtitle: '技术拆解', icon: GitBranch, accent: 'login-showcase-accent-secondary' },
-  { id: 'implementation', title: 'Implementation', subtitle: '开发执行', icon: Terminal, accent: 'login-showcase-accent-primary' },
-  { id: 'review', title: 'Code Review', subtitle: '代码复核', icon: ScanSearch, accent: 'login-showcase-accent-warning' },
+  { id: 'review', title: 'Code Review', subtitle: '代码审核', icon: ScanSearch, accent: 'login-showcase-accent-warning' },
   { id: 'qa', title: 'QA Validation', subtitle: '测试验收', icon: BadgeCheck, accent: 'login-showcase-accent-success' },
 ]
 
 const initialTasks: ShowcaseTask[][] = [
   [{ id: 'AK-801: Database Schema Spec', progress: 42 }, { id: 'AK-802: Edge Case Analysis', progress: 68 }],
   [{ id: 'AK-914: API Protocol Mapping', progress: 54 }],
-  [],
   [],
   [],
 ]
@@ -55,7 +53,7 @@ function useMediaQuery(query: string) {
 
 function positionClass(index: number, activeIndex: number) {
   const offset = (index - activeIndex + stages.length) % stages.length
-  return ['login-showcase-stage-active', 'login-showcase-stage-next-1', 'login-showcase-stage-next-2', 'login-showcase-stage-prev-2', 'login-showcase-stage-prev-1'][offset]
+  return ['login-showcase-stage-active', 'login-showcase-stage-next-1', 'login-showcase-stage-next-2', 'login-showcase-stage-prev-1'][offset]
 }
 
 export function LoginWorkflowShowcase() {
@@ -121,7 +119,7 @@ export function LoginWorkflowShowcase() {
       <div className="login-showcase-copy" data-test-id="login-workflow-copy">
         <p className="login-showcase-eyebrow" data-test-id="login-workflow-eyebrow">AGENTIC DELIVERY SYSTEM</p>
         <h2 className="login-showcase-heading" data-test-id="login-workflow-heading">Agentic Coding 时代的项目管理系统</h2>
-        <p className="login-showcase-description" data-test-id="login-workflow-description">自动执行与人工复核协同流转，保持每个交付阶段清晰可见。</p>
+        <p className="login-showcase-description" data-test-id="login-workflow-description">自动执行与人工审核协同流转，保持每个交付阶段清晰可见。</p>
       </div>
       <div className="login-showcase-carousel" data-test-id="login-workflow-carousel">
         {stages.map((stage, stageIndex) => {
