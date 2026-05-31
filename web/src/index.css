@@ -70,4 +70,238 @@
   .precision-progress::after {
     @apply block h-full w-1/2 animate-pulse bg-primary content-[''];
   }
+
+  .login-showcase {
+    @apply relative min-h-screen overflow-hidden bg-background;
+  }
+
+  .login-showcase-grid {
+    @apply pointer-events-none absolute inset-0;
+    background-image:
+      linear-gradient(to right, color-mix(in srgb, var(--primary) 10%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--primary) 10%, transparent) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .login-showcase-glow {
+    @apply pointer-events-none absolute inset-0;
+    background: radial-gradient(circle at 52% 55%, color-mix(in srgb, var(--primary) 18%, transparent) 0%, transparent 58%);
+  }
+
+  .login-showcase-copy {
+    @apply absolute left-8 top-8 z-20 max-w-lg xl:left-12 xl:top-12;
+  }
+
+  .login-showcase-eyebrow {
+    @apply text-[10px] font-semibold tracking-[0.28em] text-primary;
+  }
+
+  .login-showcase-heading {
+    @apply mt-3 text-3xl font-semibold tracking-[-0.04em] text-foreground;
+  }
+
+  .login-showcase-description {
+    @apply mt-3 max-w-md text-sm leading-6 text-muted-foreground;
+  }
+
+  .login-showcase-carousel {
+    @apply absolute inset-0;
+    perspective: 1200px;
+    transform-style: preserve-3d;
+  }
+
+  .login-showcase-stage {
+    @apply absolute left-1/2 top-[58%] flex h-[25rem] w-64 flex-col overflow-hidden p-4;
+    margin-left: -8rem;
+    margin-top: -12.5rem;
+    transition: all 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
+  .login-showcase-stage-active {
+    @apply z-10 opacity-100;
+    border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+    box-shadow: 0 0 32px color-mix(in srgb, var(--primary) 18%, transparent);
+    transform: translateZ(0) scale(1.08);
+  }
+
+  .login-showcase-stage-next-1 {
+    @apply z-[9] opacity-60;
+    transform: translateX(220px) translateZ(-100px) scale(0.9);
+  }
+
+  .login-showcase-stage-next-2 {
+    @apply z-[8] opacity-25;
+    transform: translateX(390px) translateZ(-200px) scale(0.74);
+  }
+
+  .login-showcase-stage-prev-1 {
+    @apply z-[9] opacity-60;
+    transform: translateX(-220px) translateZ(-100px) scale(0.9);
+  }
+
+  .login-showcase-stage-prev-2 {
+    @apply z-[8] opacity-25;
+    transform: translateX(-390px) translateZ(-200px) scale(0.74);
+  }
+
+  .login-showcase-stage-header {
+    @apply mb-4 flex items-center gap-3 border-b border-outline pb-4;
+  }
+
+  .login-showcase-stage-icon {
+    @apply size-5 shrink-0;
+  }
+
+  .login-showcase-stage-subtitle {
+    @apply text-[10px] font-semibold tracking-[0.16em] text-muted-foreground;
+  }
+
+  .login-showcase-stage-title {
+    @apply mt-1 text-sm font-semibold text-foreground;
+  }
+
+  .login-showcase-task-list {
+    @apply flex flex-1 flex-col gap-3 overflow-hidden p-1;
+  }
+
+  .login-showcase-task {
+    @apply relative overflow-hidden rounded-md border border-outline bg-surface-high p-3;
+    transition: all 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
+  .login-showcase-task-active {
+    border-color: color-mix(in srgb, var(--primary) 65%, transparent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 24%, transparent);
+    animation: login-showcase-border-pulse 2s infinite;
+  }
+
+  .login-showcase-task-scanning::after {
+    @apply absolute inset-y-0 w-1/2 content-[''];
+    left: -100%;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary) 40%, transparent), transparent);
+    animation: login-showcase-scan 1s infinite;
+  }
+
+  .login-showcase-task-verifying {
+    border-color: var(--login-showcase-success);
+    animation: login-showcase-verify 0.5s ease-out forwards;
+  }
+
+  .login-showcase-task-moving {
+    @apply opacity-0;
+    transform: translateX(280px);
+  }
+
+  .login-showcase-task-row {
+    @apply relative z-10 flex items-center justify-between gap-2;
+  }
+
+  .login-showcase-task-label {
+    @apply truncate text-[10px] font-semibold text-muted-foreground;
+  }
+
+  .login-showcase-task-icon {
+    @apply size-3.5 shrink-0;
+    animation: login-showcase-spin 3s linear infinite;
+  }
+
+  .login-showcase-task-verifying .login-showcase-task-icon {
+    color: var(--login-showcase-success);
+    animation: login-showcase-pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }
+
+  .login-showcase-progress-row {
+    @apply relative z-10 mt-3 flex items-center gap-2;
+  }
+
+  .login-showcase-progress {
+    @apply h-1 flex-1 overflow-hidden rounded-full bg-muted;
+  }
+
+  .login-showcase-progress-fill {
+    @apply h-full;
+    background-color: currentColor;
+    transition: width 1.5s ease-in-out;
+  }
+
+  .login-showcase-agent {
+    @apply hidden text-[8px] font-semibold tracking-[0.12em] text-primary;
+  }
+
+  .login-showcase-task-scanning .login-showcase-agent {
+    @apply block;
+    animation: login-showcase-agent-pulse 1.5s infinite;
+  }
+
+  .login-showcase-code-stream {
+    @apply absolute bottom-0.5 right-1 hidden font-mono text-[7px] text-primary;
+  }
+
+  .login-showcase-task-scanning .login-showcase-code-stream {
+    @apply block;
+  }
+
+  .login-showcase-accent-primary {
+    @apply text-primary;
+  }
+
+  .login-showcase-accent-secondary {
+    @apply text-secondary-foreground;
+  }
+
+  .login-showcase-accent-warning {
+    color: var(--login-showcase-warning);
+  }
+
+  .login-showcase-accent-success {
+    color: var(--login-showcase-success);
+  }
+}
+
+:root {
+  --login-showcase-success: #059669;
+  --login-showcase-warning: #b7791f;
+}
+
+.dark {
+  --login-showcase-success: #10b981;
+  --login-showcase-warning: #e6c359;
+}
+
+@keyframes login-showcase-border-pulse {
+  0%, 100% { box-shadow: 0 0 6px color-mix(in srgb, var(--primary) 20%, transparent); }
+  50% { box-shadow: 0 0 16px color-mix(in srgb, var(--primary) 54%, transparent); }
+}
+
+@keyframes login-showcase-scan {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+@keyframes login-showcase-spin {
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes login-showcase-agent-pulse {
+  0%, 100% { opacity: 0.65; text-shadow: 0 0 2px color-mix(in srgb, var(--primary) 45%, transparent); }
+  50% { opacity: 1; text-shadow: 0 0 10px color-mix(in srgb, var(--primary) 90%, transparent); }
+}
+
+@keyframes login-showcase-verify {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--login-showcase-success) 70%, transparent); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 10px transparent; }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+}
+
+@keyframes login-showcase-pop-in {
+  0% { opacity: 0; transform: scale(0); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-showcase-static *,
+  .login-showcase-static *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

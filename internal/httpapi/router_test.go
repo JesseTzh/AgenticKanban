@@ -186,6 +186,42 @@ func TestAPIAuthenticationErrorEnvelopes(t *testing.T) {
 	assertErrorEnvelope(t, rr, 401, "unauthorized", "unauthorized")
 }
 
+func TestLoginCookiePersistence(t *testing.T) {
+	r := newRouter(t)
+
+	tests := []struct {
+		name       string
+		remember   bool
+		wantMaxAge int
+	}{
+		{name: "session cookie by default", remember: false, wantMaxAge: 0},
+		{name: "persistent cookie when remembered", remember: true, wantMaxAge: 3600},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rr, _ := doJSON(t, r, http.MethodPost, "/api/auth/login", map[string]any{
+				"username": "admin",
+				"password": "admin123",
+				"remember": tt.remember,
+			}, nil)
+			if rr.Code != 200 {
+				t.Fatalf("login code=%d body=%s", rr.Code, rr.Body.String())
+			}
+			cookies := rr.Result().Cookies()
+			if len(cookies) != 1 {
+				t.Fatalf("cookies=%d", len(cookies))
+			}
+			if cookies[0].MaxAge != tt.wantMaxAge {
+				t.Fatalf("MaxAge=%d want=%d", cookies[0].MaxAge, tt.wantMaxAge)
+			}
+			if !cookies[0].HttpOnly {
+				t.Fatal("session cookie must remain HttpOnly")
+			}
+		})
+	}
+}
+
 func TestFullHumanAndCommitFlow(t *testing.T) {
 	r := newRouter(t)
 	loginRR, _ := doJSON(t, r, http.MethodPost, "/api/auth/login", map[string]string{"username": "admin", "password": "admin123"}, nil)

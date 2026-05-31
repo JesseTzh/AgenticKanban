@@ -226,7 +226,11 @@ func bad(c *gin.Context, err error) {
 }
 
 func (a *api) login(c *gin.Context) {
-	var in struct{ Username, Password string }
+	var in struct {
+		Username string
+		Password string
+		Remember bool
+	}
 	if err := c.ShouldBindJSON(&in); err != nil {
 		bad(c, err)
 		return
@@ -243,7 +247,11 @@ func (a *api) login(c *gin.Context) {
 		return
 	}
 	a.d.Logger.Info("login success", slog.String("username", u.Username))
-	c.SetCookie("ak_session", tok, int(a.d.Config.SessionTTL.Seconds()), "/", "", false, true)
+	maxAge := 0
+	if in.Remember {
+		maxAge = int(a.d.Config.SessionTTL.Seconds())
+	}
+	c.SetCookie("ak_session", tok, maxAge, "/", "", false, true)
 	success(c, 200, gin.H{"user": u})
 }
 func (a *api) logout(c *gin.Context) {
