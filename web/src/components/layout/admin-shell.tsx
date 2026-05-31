@@ -29,7 +29,10 @@ export function AdminShell({ children, title, projectID }: AdminShellProps) {
     <div className={cn('min-h-screen bg-background md:grid', sidebarOpen && 'md:grid-cols-[max-content_minmax(0,1fr)]')} data-test-id="admin-shell">
       {sidebarOpen && (
         <aside className="sticky top-0 hidden h-screen bg-surface-low shadow-card outline outline-1 outline-outline md:block" data-test-id="admin-sidebar">
-          <div className="flex h-16 items-center px-6 text-lg font-semibold tracking-tight" data-test-id="admin-brand">AgenticKanban</div>
+          <div className="flex h-16 items-center gap-1 px-6 text-lg font-semibold tracking-tight" data-test-id="admin-brand">
+            <span className="text-primary">Agentic</span>
+            <span>Kanban</span>
+          </div>
           <nav className="space-y-2 p-3" data-test-id="admin-navigation">
             {items.map(({ label, href, icon: Icon }) => (
               <Link
