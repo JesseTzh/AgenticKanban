@@ -9,7 +9,6 @@ const (
 	StageTechnicalBreakdown       = "technical_breakdown"
 	StageCodeReview               = "code_review"
 	StageTestAcceptance           = "test_acceptance"
-	StageDoneArchive              = "done_archive"
 
 	StatusNotReady            = "not_ready"
 	StatusAgenticReady        = "agentic_ready"
@@ -17,12 +16,9 @@ const (
 	StatusPendingConfirmation = "pending_confirmation"
 	StatusNeedsChanges        = "needs_changes"
 	StatusReviewPassed        = "review_passed"
-	StatusTestPassed          = "test_passed"
-	StatusArchived            = "archived"
 
 	ReviewApproved = "approved"
 	ReviewRejected = "rejected"
-	TestPassed     = "passed"
 	TestFailed     = "failed"
 )
 
@@ -39,6 +35,7 @@ type Task struct {
 	ID, ProjectID, ParentID, Title, Description, StageKey, Status string
 	AgentReady                                                    bool
 	Locked                                                        bool
+	Completed                                                     bool
 	AgentID, CreatedBy, CreatedAt, UpdatedAt                      string
 }
 
@@ -50,11 +47,6 @@ type Repository struct {
 	CreatedAt, UpdatedAt                       string
 }
 type Commit struct{ ID, ProjectID, RepositoryID, SHA, Message, Author, Branch, CommittedAt, CreatedAt string }
-type Archive struct {
-	ID, TaskID                    string
-	Version                       int
-	Content, CreatedBy, CreatedAt string
-}
 
 func DefaultStages() []Stage {
 	return []Stage{
@@ -62,7 +54,6 @@ func DefaultStages() []Stage {
 		{StageTechnicalBreakdown, "技术拆解", 2},
 		{StageCodeReview, "代码审核", 3},
 		{StageTestAcceptance, "测试验收", 4},
-		{StageDoneArchive, "完成归档", 5},
 	}
 }
 

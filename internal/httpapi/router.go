@@ -69,9 +69,9 @@ func NewRouter(d Dependencies) http.Handler {
 	authn.DELETE("/tasks/:taskID/commits/:commitID", a.require("commit", "write"), a.unlinkCommit)
 	authn.POST("/tasks/:taskID/reviews", a.require("review", "write"), a.review)
 	authn.POST("/tasks/:taskID/tests", a.require("test", "write"), a.testRecord)
-	authn.POST("/tasks/:taskID/archives", a.require("archive", "write"), a.archive)
-	authn.GET("/projects/:projectID/archives", a.require("archive", "read"), a.archives)
-	authn.POST("/tasks/:taskID/archive-refs", a.require("archive", "write"), a.archiveRef)
+	authn.POST("/tasks/:taskID/complete", a.require("task", "update"), a.completeTask)
+	authn.GET("/tasks/:taskID/refs", a.require("task", "read"), a.taskRefs)
+	authn.POST("/tasks/:taskID/refs", a.require("task", "update"), a.taskRef)
 	authn.GET("/agent-tokens", a.require("agent", "read"), a.agentTokens)
 	authn.POST("/agent-tokens", a.require("agent", "write"), a.createAgentToken)
 
@@ -496,34 +496,28 @@ func (a *api) testRecord(c *gin.Context) {
 	}
 	success(c, 200, gin.H{"ok": true, "defect_task_id": defect})
 }
-func (a *api) archive(c *gin.Context) {
-	var in struct{ Content string }
-	if err := c.ShouldBindJSON(&in); err != nil {
+func (a *api) completeTask(c *gin.Context) {
+	if err := a.d.Store.CompleteTask(reqctx(c), c.Param("taskID"), actor(c)); err != nil {
 		bad(c, err)
 		return
 	}
-	ar, err := a.d.Store.CreateArchive(reqctx(c), c.Param("taskID"), in.Content, actor(c))
-	if err != nil {
-		bad(c, err)
-		return
-	}
-	success(c, 201, ar)
+	success(c, 200, gin.H{"ok": true})
 }
-func (a *api) archives(c *gin.Context) {
-	xs, err := a.d.Store.ListArchives(reqctx(c), c.Param("projectID"))
+func (a *api) taskRefs(c *gin.Context) {
+	xs, err := a.d.Store.ListTaskRefs(reqctx(c), c.Param("taskID"))
 	if err != nil {
 		bad(c, err)
 		return
 	}
 	success(c, 200, xs)
 }
-func (a *api) archiveRef(c *gin.Context) {
-	var in struct{ ArchiveID string }
+func (a *api) taskRef(c *gin.Context) {
+	var in struct{ ReferencedTaskID string }
 	if err := c.ShouldBindJSON(&in); err != nil {
 		bad(c, err)
 		return
 	}
-	if err := a.d.Store.AddArchiveRef(reqctx(c), c.Param("taskID"), in.ArchiveID, actor(c)); err != nil {
+	if err := a.d.Store.AddTaskRef(reqctx(c), c.Param("taskID"), in.ReferencedTaskID, actor(c)); err != nil {
 		bad(c, err)
 		return
 	}

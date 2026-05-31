@@ -18,6 +18,7 @@ var ErrNotFound = errors.New("not found")
 var ErrInvalidTransition = errors.New("invalid transition")
 var ErrLocked = errors.New("task locked")
 var ErrCommitRequired = errors.New("commit required before code review")
+var ErrInvalidReference = errors.New("invalid task reference")
 
 type Store struct {
 	db  *sql.DB
@@ -154,7 +155,7 @@ func (s *Store) CreateTask(ctx context.Context, t domain.Task, actor string) (do
 		t.Status = domain.StatusNotReady
 	}
 	t.AgentReady = t.Status == domain.StatusAgenticReady
-	_, err := s.db.ExecContext(ctx, `INSERT INTO tasks(id,project_id,parent_id,title,description,stage_key,status,agent_ready,locked,created_by) VALUES(?,?,?,?,?,?,?,?,?,?)`, t.ID, t.ProjectID, nullable(t.ParentID), t.Title, t.Description, t.StageKey, t.Status, t.AgentReady, t.Locked, actor)
+	_, err := s.db.ExecContext(ctx, `INSERT INTO tasks(id,project_id,parent_id,title,description,stage_key,status,agent_ready,locked,completed,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?)`, t.ID, t.ProjectID, nullable(t.ParentID), t.Title, t.Description, t.StageKey, t.Status, t.AgentReady, t.Locked, t.Completed, actor)
 	if err == nil {
 		s.hist(ctx, t.ID, "", "", t.StageKey, t.Status, actor, "create task")
 		s.audit(ctx, actor, "task.create", "task", t.ID, t.Title)
@@ -162,7 +163,7 @@ func (s *Store) CreateTask(ctx context.Context, t domain.Task, actor string) (do
 	return t, err
 }
 func (s *Store) ListTasks(ctx context.Context, projectID string) ([]domain.Task, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,locked,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE project_id=? AND deleted_at IS NULL ORDER BY created_at DESC`, projectID)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,locked,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE project_id=? AND deleted_at IS NULL ORDER BY created_at DESC`, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +171,7 @@ func (s *Store) ListTasks(ctx context.Context, projectID string) ([]domain.Task,
 	return scanTasks(rows)
 }
 func (s *Store) ListAgentReadyTasks(ctx context.Context) ([]domain.Task, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,locked,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE agent_ready=1 AND locked=0 AND status=? AND deleted_at IS NULL ORDER BY created_at`, domain.StatusAgenticReady)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,locked,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE agent_ready=1 AND locked=0 AND completed=0 AND status=? AND deleted_at IS NULL ORDER BY created_at`, domain.StatusAgenticReady)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +179,7 @@ func (s *Store) ListAgentReadyTasks(ctx context.Context) ([]domain.Task, error) 
 	return scanTasks(rows)
 }
 func (s *Store) GetTask(ctx context.Context, id string) (domain.Task, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,locked,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE id=? AND deleted_at IS NULL`, id)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,locked,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE id=? AND deleted_at IS NULL`, id)
 	if err != nil {
 		return domain.Task{}, err
 	}
@@ -478,8 +479,8 @@ func (s *Store) CreateTestRecord(ctx context.Context, taskID, verdict, note, act
 	if err != nil {
 		return "", err
 	}
-	if verdict == domain.TestPassed {
-		return "", s.TransitionTask(ctx, taskID, domain.StageDoneArchive, domain.StatusTestPassed, actor, "test passed")
+	if verdict != domain.TestFailed {
+		return "", ErrInvalidTransition
 	}
 	parent, err := s.GetTask(ctx, taskID)
 	if err != nil {
@@ -488,37 +489,46 @@ func (s *Store) CreateTestRecord(ctx context.Context, taskID, verdict, note, act
 	defect, _ := s.CreateTask(ctx, domain.Task{ProjectID: parent.ProjectID, ParentID: taskID, Title: "缺陷修复：" + parent.Title, Description: note, StageKey: domain.StageTechnicalBreakdown, Status: domain.StatusAgenticReady}, actor)
 	return defect.ID, s.TransitionTask(ctx, taskID, domain.StageTechnicalBreakdown, domain.StatusNeedsChanges, actor, "test failed")
 }
-func (s *Store) CreateArchive(ctx context.Context, taskID, content, actor string) (domain.Archive, error) {
-	var ver int
-	_ = s.db.QueryRowContext(ctx, `SELECT COALESCE(MAX(version),0)+1 FROM archives WHERE task_id=?`, taskID).Scan(&ver)
-	a := domain.Archive{ID: utils.NewID("arc"), TaskID: taskID, Version: ver, Content: content, CreatedBy: actor}
-	_, err := s.db.ExecContext(ctx, `INSERT INTO archives(id,task_id,version,content,created_by) VALUES(?,?,?,?,?)`, a.ID, a.TaskID, a.Version, a.Content, a.CreatedBy)
-	if err == nil {
-		_ = s.TransitionTask(ctx, taskID, domain.StageDoneArchive, domain.StatusArchived, actor, "archive generated")
-		s.audit(ctx, actor, "archive.create", "task", taskID, fmt.Sprint(ver))
+func (s *Store) CompleteTask(ctx context.Context, taskID, actor string) error {
+	t, err := s.GetTask(ctx, taskID)
+	if err != nil {
+		return err
 	}
-	return a, err
+	if t.StageKey != domain.StageTestAcceptance {
+		return ErrInvalidTransition
+	}
+	_, err = s.db.ExecContext(ctx, `UPDATE tasks SET completed=1,agent_ready=0,updated_at=CURRENT_TIMESTAMP WHERE id=?`, taskID)
+	if err == nil {
+		s.audit(ctx, actor, "task.complete", "task", taskID, "")
+	}
+	return err
 }
-func (s *Store) ListArchives(ctx context.Context, projectID string) ([]domain.Archive, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT a.id,a.task_id,a.version,a.content,a.created_by,a.created_at FROM archives a JOIN tasks t ON t.id=a.task_id WHERE t.project_id=? ORDER BY a.created_at DESC`, projectID)
+func (s *Store) ListTaskRefs(ctx context.Context, taskID string) ([]domain.Task, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT t.id,t.project_id,COALESCE(t.parent_id,''),t.title,t.description,t.stage_key,t.status,t.agent_ready,t.locked,t.completed,COALESCE(t.agent_id,''),t.created_by,t.created_at,t.updated_at FROM task_refs r JOIN tasks t ON t.id=r.referenced_task_id WHERE r.task_id=? AND t.deleted_at IS NULL ORDER BY r.created_at DESC`, taskID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []domain.Archive
-	for rows.Next() {
-		var a domain.Archive
-		if err := rows.Scan(&a.ID, &a.TaskID, &a.Version, &a.Content, &a.CreatedBy, &a.CreatedAt); err != nil {
-			return nil, err
-		}
-		out = append(out, a)
-	}
-	return out, rows.Err()
+	return scanTasks(rows)
 }
-func (s *Store) AddArchiveRef(ctx context.Context, taskID, archiveID, actor string) error {
-	_, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO task_archive_refs(task_id,archive_id,created_by) VALUES(?,?,?)`, taskID, archiveID, actor)
+func (s *Store) AddTaskRef(ctx context.Context, taskID, referencedTaskID, actor string) error {
+	if taskID == referencedTaskID {
+		return ErrInvalidReference
+	}
+	task, err := s.GetTask(ctx, taskID)
+	if err != nil {
+		return err
+	}
+	referencedTask, err := s.GetTask(ctx, referencedTaskID)
+	if err != nil {
+		return err
+	}
+	if task.ProjectID != referencedTask.ProjectID {
+		return ErrInvalidReference
+	}
+	_, err = s.db.ExecContext(ctx, `INSERT OR IGNORE INTO task_refs(task_id,referenced_task_id,created_by) VALUES(?,?,?)`, taskID, referencedTaskID, actor)
 	if err == nil {
-		s.audit(ctx, actor, "archive.reference", "task", taskID, archiveID)
+		s.audit(ctx, actor, "task.reference", "task", taskID, referencedTaskID)
 	}
 	return err
 }
@@ -527,7 +537,7 @@ func scanTasks(rows *sql.Rows) ([]domain.Task, error) {
 	var out []domain.Task
 	for rows.Next() {
 		var t domain.Task
-		if err := rows.Scan(&t.ID, &t.ProjectID, &t.ParentID, &t.Title, &t.Description, &t.StageKey, &t.Status, &t.AgentReady, &t.Locked, &t.AgentID, &t.CreatedBy, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.ProjectID, &t.ParentID, &t.Title, &t.Description, &t.StageKey, &t.Status, &t.AgentReady, &t.Locked, &t.Completed, &t.AgentID, &t.CreatedBy, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, t)

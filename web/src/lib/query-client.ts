@@ -13,5 +13,5 @@ export const queryKeys = {
   tasks: (projectID: string) => ['projects', projectID, 'tasks'] as const,
   repos: (projectID: string) => ['projects', projectID, 'repositories'] as const,
   commits: (projectID: string) => ['projects', projectID, 'commits'] as const,
-  archives: (projectID: string) => ['projects', projectID, 'archives'] as const,
+  taskRefs: (taskID: string) => ['tasks', taskID, 'refs'] as const,
 }

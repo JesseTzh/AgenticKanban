@@ -1,4 +1,4 @@
-import type { Archive, Commit, Project, Repository, Stage, Task } from '@/types'
+import type { Commit, Project, Repository, Stage, Task } from '@/types'
 
 type APIEnvelope<T> = {
   data: T | null
@@ -61,7 +61,8 @@ export const api = {
     request(`/api/tasks/${taskID}/reviews`, { method: 'POST', body: JSON.stringify(data) }),
   testRecord: (taskID: string, data: { Verdict: string; Note: string }) =>
     request(`/api/tasks/${taskID}/tests`, { method: 'POST', body: JSON.stringify(data) }),
-  createArchive: (taskID: string, Content: string) =>
-    request(`/api/tasks/${taskID}/archives`, { method: 'POST', body: JSON.stringify({ Content }) }),
-  archives: (projectID: string) => request<Archive[]>(`/api/projects/${projectID}/archives`),
+  completeTask: (taskID: string) => request(`/api/tasks/${taskID}/complete`, { method: 'POST' }),
+  taskRefs: (taskID: string) => request<Task[]>(`/api/tasks/${taskID}/refs`),
+  addTaskRef: (taskID: string, ReferencedTaskID: string) =>
+    request(`/api/tasks/${taskID}/refs`, { method: 'POST', body: JSON.stringify({ ReferencedTaskID }) }),
 }

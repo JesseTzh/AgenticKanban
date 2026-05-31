@@ -40,7 +40,7 @@ export function TaskCard({ projectID, task }: { projectID: string; task: Task })
           </div>
         </CardHeader>
         <CardFooter className="justify-between px-4 pb-0" data-test-id={`task-card-footer-${task.ID}`}>
-          <div className="flex flex-wrap gap-2" data-test-id={`task-card-badges-${task.ID}`}><Badge data-test-id={`task-status-${task.ID}`} variant="secondary">{task.Status}</Badge>{task.Locked ? <Badge data-test-id={`task-lock-${task.ID}`} variant="outline"><LockKeyhole className="size-3" />已锁定</Badge> : null}</div>
+          <div className="flex flex-wrap gap-2" data-test-id={`task-card-badges-${task.ID}`}><Badge data-test-id={`task-status-${task.ID}`} variant="secondary">{task.Status}</Badge>{task.Completed ? <Badge data-test-id={`task-completed-${task.ID}`} variant="secondary">已完成</Badge> : null}{task.Locked ? <Badge data-test-id={`task-lock-${task.ID}`} variant="outline"><LockKeyhole className="size-3" />已锁定</Badge> : null}</div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button aria-label="任务操作" data-test-id={`task-actions-${task.ID}`} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()} size="icon" variant="ghost"><Ellipsis className="size-4" /></Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end" data-test-id={`task-menu-${task.ID}`}>
@@ -50,13 +50,12 @@ export function TaskCard({ projectID, task }: { projectID: string; task: Task })
               <DropdownMenuSeparator />
               <DropdownMenuItem data-test-id={`task-review-approved-${task.ID}`} onSelect={() => mutation.mutate(() => api.review(task.ID, { Verdict: 'approved', Note: '通过' }))}>审核通过</DropdownMenuItem>
               <DropdownMenuItem data-test-id={`task-test-failed-${task.ID}`} onSelect={() => mutation.mutate(() => api.testRecord(task.ID, { Verdict: 'failed', Note: '测试失败' }))}>测试失败</DropdownMenuItem>
-              <DropdownMenuItem data-test-id={`task-test-passed-${task.ID}`} onSelect={() => mutation.mutate(() => api.testRecord(task.ID, { Verdict: 'passed', Note: '通过' }))}>测试通过</DropdownMenuItem>
-              <DropdownMenuItem data-test-id={`task-create-archive-${task.ID}`} onSelect={() => mutation.mutate(() => api.createArchive(task.ID, `# ${task.Title}\n\n完成归档。`))}>生成归档</DropdownMenuItem>
+              {task.StageKey === 'test_acceptance' && !task.Completed ? <DropdownMenuItem data-test-id={`task-complete-${task.ID}`} onSelect={() => mutation.mutate(() => api.completeTask(task.ID))}>确认完成</DropdownMenuItem> : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </CardFooter>
       </Card>
-      <TaskDetailDialog onOpenChange={setDetailsOpen} open={detailsOpen} task={task} />
+      <TaskDetailDialog onOpenChange={setDetailsOpen} open={detailsOpen} projectID={projectID} task={task} />
     </>
   )
 }

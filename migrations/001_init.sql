@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   status TEXT NOT NULL,
   agent_ready INTEGER NOT NULL DEFAULT 0,
   locked INTEGER NOT NULL DEFAULT 0,
+  completed INTEGER NOT NULL DEFAULT 0,
   agent_id TEXT,
   created_by TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -145,21 +146,12 @@ CREATE TABLE IF NOT EXISTS test_records (
   tester_id TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TABLE IF NOT EXISTS archives (
-  id TEXT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS task_refs (
   task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  version INTEGER NOT NULL,
-  content TEXT NOT NULL,
+  referenced_task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   created_by TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(task_id, version)
-);
-CREATE TABLE IF NOT EXISTS task_archive_refs (
-  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  archive_id TEXT NOT NULL REFERENCES archives(id) ON DELETE CASCADE,
-  created_by TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY(task_id, archive_id)
+  PRIMARY KEY(task_id, referenced_task_id)
 );
 CREATE TABLE IF NOT EXISTS audit_logs (
   id TEXT PRIMARY KEY,

@@ -2,8 +2,7 @@ export const STAGES = [
   ['requirement_clarification','需求澄清'],
   ['technical_breakdown','技术拆解'],
   ['code_review','代码审核'],
-  ['test_acceptance','测试验收'],
-  ['done_archive','完成归档']
+  ['test_acceptance','测试验收']
 ] as const
 
 export function stageName(key: string): string {

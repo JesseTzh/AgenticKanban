@@ -40,7 +40,7 @@ func TestProjectCreatesDefaultBoard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := len(stages), 5; got != want {
+	if got, want := len(stages), 4; got != want {
 		t.Fatalf("stages=%d want=%d", got, want)
 	}
 }
@@ -129,5 +129,58 @@ func TestTestFailureCreatesDefectTask(t *testing.T) {
 	}
 	if task.StageKey != domain.StageTechnicalBreakdown {
 		t.Fatalf("parent stage=%s", task.StageKey)
+	}
+}
+
+func TestCompleteTaskMarksTestAcceptanceTaskCompleted(t *testing.T) {
+	st := newTestStore(t)
+	ctx := context.Background()
+	p, _ := st.CreateProject(ctx, "demo", "", "u")
+	task, _ := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "feature", StageKey: domain.StageTestAcceptance, Status: domain.StatusAgenticReady}, "u")
+	if err := st.CompleteTask(ctx, task.ID, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	task, err := st.GetTask(ctx, task.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !task.Completed {
+		t.Fatal("expected completed task")
+	}
+}
+
+func TestAddTaskRefAllowsSameProjectTaskAndIgnoresDuplicate(t *testing.T) {
+	st := newTestStore(t)
+	ctx := context.Background()
+	p, _ := st.CreateProject(ctx, "demo", "", "u")
+	task, _ := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "feature"}, "u")
+	referenced, _ := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "context"}, "u")
+	if err := st.AddTaskRef(ctx, task.ID, referenced.ID, "u"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.AddTaskRef(ctx, task.ID, referenced.ID, "u"); err != nil {
+		t.Fatal(err)
+	}
+	refs, err := st.ListTaskRefs(ctx, task.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := len(refs), 1; got != want {
+		t.Fatalf("refs=%d want=%d", got, want)
+	}
+}
+
+func TestAddTaskRefRejectsSelfAndCrossProject(t *testing.T) {
+	st := newTestStore(t)
+	ctx := context.Background()
+	p1, _ := st.CreateProject(ctx, "one", "", "u")
+	p2, _ := st.CreateProject(ctx, "two", "", "u")
+	task, _ := st.CreateTask(ctx, domain.Task{ProjectID: p1.ID, Title: "feature"}, "u")
+	other, _ := st.CreateTask(ctx, domain.Task{ProjectID: p2.ID, Title: "context"}, "u")
+	if err := st.AddTaskRef(ctx, task.ID, task.ID, "u"); err != store.ErrInvalidReference {
+		t.Fatalf("self ref err=%v", err)
+	}
+	if err := st.AddTaskRef(ctx, task.ID, other.ID, "u"); err != store.ErrInvalidReference {
+		t.Fatalf("cross project ref err=%v", err)
 	}
 }

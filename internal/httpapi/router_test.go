@@ -244,7 +244,7 @@ func TestFullHumanAndCommitFlow(t *testing.T) {
 	if err := json.Unmarshal(responseData(t, rr), &stages); err != nil {
 		t.Fatal(err)
 	}
-	if len(stages) != 5 {
+	if len(stages) != 4 {
 		t.Fatalf("stages=%d", len(stages))
 	}
 
@@ -291,5 +291,33 @@ func TestFullHumanAndCommitFlow(t *testing.T) {
 	rr, _ = doJSON(t, r, http.MethodPost, "/api/tasks/"+taskID+"/transitions", map[string]string{"StageKey": "code_review", "Status": "agentic_ready", "Reason": "ready"}, cookie)
 	if rr.Code != 200 {
 		t.Fatalf("transition code=%d body=%s", rr.Code, rr.Body.String())
+	}
+	rr, _ = doJSON(t, r, http.MethodPost, "/api/tasks/"+taskID+"/transitions", map[string]string{"StageKey": "test_acceptance", "Status": "agentic_ready", "Reason": "reviewed"}, cookie)
+	if rr.Code != 200 {
+		t.Fatalf("test transition code=%d body=%s", rr.Code, rr.Body.String())
+	}
+	rr, _ = doJSON(t, r, http.MethodPost, "/api/tasks/"+taskID+"/complete", nil, cookie)
+	if rr.Code != 200 {
+		t.Fatalf("complete code=%d body=%s", rr.Code, rr.Body.String())
+	}
+	rr, referenceBody := doJSON(t, r, http.MethodPost, "/api/projects/"+projectID+"/tasks", map[string]any{"Title": "Reference context"}, cookie)
+	if rr.Code != 201 {
+		t.Fatalf("create reference task code=%d body=%s", rr.Code, rr.Body.String())
+	}
+	referenceID := referenceBody["ID"].(string)
+	rr, _ = doJSON(t, r, http.MethodPost, "/api/tasks/"+taskID+"/refs", map[string]string{"ReferencedTaskID": referenceID}, cookie)
+	if rr.Code != 200 {
+		t.Fatalf("add task ref code=%d body=%s", rr.Code, rr.Body.String())
+	}
+	rr, _ = doJSON(t, r, http.MethodGet, "/api/tasks/"+taskID+"/refs", nil, cookie)
+	if rr.Code != 200 {
+		t.Fatalf("task refs code=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var refs []domain.Task
+	if err := json.Unmarshal(responseData(t, rr), &refs); err != nil {
+		t.Fatal(err)
+	}
+	if len(refs) != 1 || refs[0].ID != referenceID {
+		t.Fatalf("refs=%v", refs)
 	}
 }

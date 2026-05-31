@@ -34,7 +34,6 @@ m = g(r.sub, p.sub) && (p.obj == "*" || p.obj == r.obj) && (p.act == "*" || p.ac
 	_, _ = e.AddPolicy("manager", "commit", "*")
 	_, _ = e.AddPolicy("manager", "review", "*")
 	_, _ = e.AddPolicy("manager", "test", "*")
-	_, _ = e.AddPolicy("manager", "archive", "*")
 	_, _ = e.AddPolicy("manager", "agent", "*")
 	_, _ = e.AddPolicy("developer", "project", "read")
 	_, _ = e.AddPolicy("developer", "task", "read")
