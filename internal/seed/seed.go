@@ -1,0 +1,218 @@
+package seed
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+
+	"agentic-kanban/internal/auth"
+	"agentic-kanban/internal/domain"
+)
+
+const seededAt = "2026-05-31T00:00:00Z"
+
+type Summary struct {
+	Created int
+	Skipped int
+}
+
+type inserter struct {
+	ctx     context.Context
+	tx      *sql.Tx
+	summary Summary
+}
+
+func Run(ctx context.Context, database *sql.DB, sessionSecret string) (Summary, error) {
+	tx, err := database.BeginTx(ctx, nil)
+	if err != nil {
+		return Summary{}, fmt.Errorf("begin seed transaction: %w", err)
+	}
+
+	in := &inserter{ctx: ctx, tx: tx}
+	if err := in.insertFixtures(sessionSecret); err != nil {
+		_ = tx.Rollback()
+		return Summary{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Summary{}, fmt.Errorf("commit seed transaction: %w", err)
+	}
+	return in.summary, nil
+}
+
+func (in *inserter) insertFixtures(sessionSecret string) error {
+	for _, user := range []struct {
+		id, username, password, role string
+	}{
+		{"seed_usr_admin", "admin", "admin123", domain.RoleAdmin},
+		{"seed_usr_manager", "manager", "manager123", domain.RoleManager},
+		{"seed_usr_developer", "developer", "developer123", domain.RoleDeveloper},
+	} {
+		if err := in.insert("user "+user.username,
+			`INSERT OR IGNORE INTO users(id,username,password_hash,role,created_at) VALUES(?,?,?,?,?)`,
+			user.id, user.username, auth.HashPassword(user.password, sessionSecret), user.role, seededAt); err != nil {
+			return err
+		}
+	}
+
+	for _, project := range []struct {
+		id, boardID, name, description string
+	}{
+		{"seed_prj_delivery", "seed_brd_delivery", "[Demo] AgenticKanban Delivery", "完整流程演示项目，覆盖看板、代码复核、测试验收和归档。"},
+		{"seed_prj_portal", "seed_brd_portal", "[Demo] Internal Portal", "用于项目列表和项目切换测试的辅助演示项目。"},
+	} {
+		if err := in.insert("project "+project.id,
+			`INSERT OR IGNORE INTO projects(id,name,description,created_at,updated_at) VALUES(?,?,?,?,?)`,
+			project.id, project.name, project.description, seededAt, seededAt); err != nil {
+			return err
+		}
+		if err := in.insert("board "+project.boardID,
+			`INSERT OR IGNORE INTO boards(id,project_id,name,created_at) VALUES(?,?,?,?)`,
+			project.boardID, project.id, "AgenticKanban", seededAt); err != nil {
+			return err
+		}
+		for _, stage := range domain.DefaultStages() {
+			if err := in.insert("stage "+project.id+"/"+stage.Key,
+				`INSERT OR IGNORE INTO board_stages(project_id,stage_key,name,position) VALUES(?,?,?,?)`,
+				project.id, stage.Key, stage.Name, stage.Position); err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, task := range demoTasks() {
+		if err := in.insert("task "+task.id,
+			`INSERT OR IGNORE INTO tasks(id,project_id,parent_id,title,description,stage_key,status,agent_ready,locked,agent_id,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			task.id, task.projectID, nullable(task.parentID), task.title, task.description, task.stage, task.status, task.agentReady, task.locked, nullable(task.agentID), task.createdBy, seededAt, seededAt); err != nil {
+			return err
+		}
+	}
+
+	if err := in.insert("repository seed_repo_delivery",
+		`INSERT OR IGNORE INTO repositories(id,project_id,name,git_url,webhook_secret,webhook_enabled,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)`,
+		"seed_repo_delivery", "seed_prj_delivery", "agentic-kanban", "https://example.com/demo/agentic-kanban.git", "seed_webhook_secret", true, seededAt, seededAt); err != nil {
+		return err
+	}
+	if err := in.insert("webhook event seed_wev_delivery",
+		`INSERT OR IGNORE INTO webhook_events(id,repository_id,event_id,payload_hash,status,message,created_at) VALUES(?,?,?,?,?,?,?)`,
+		"seed_wev_delivery", "seed_repo_delivery", "seed-push-001", "seed_payload_hash", "processed", "demo webhook event", seededAt); err != nil {
+		return err
+	}
+
+	for _, commit := range []struct {
+		id, sha, message, author, branch string
+	}{
+		{"seed_cmt_board", "1111111111111111111111111111111111111111", "feat: add kanban board interactions", "developer", "feat/board-interactions"},
+		{"seed_cmt_auth", "2222222222222222222222222222222222222222", "fix: tighten session validation", "developer", "fix/session-validation"},
+	} {
+		if err := in.insert("commit "+commit.id,
+			`INSERT OR IGNORE INTO commits(id,project_id,repository_id,sha,message,author,branch,committed_at,raw_payload,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)`,
+			commit.id, "seed_prj_delivery", "seed_repo_delivery", commit.sha, commit.message, commit.author, commit.branch, seededAt, "{}", seededAt); err != nil {
+			return err
+		}
+	}
+
+	for _, link := range []struct{ taskID, commitID string }{
+		{"seed_tsk_review", "seed_cmt_board"},
+		{"seed_tsk_test", "seed_cmt_auth"},
+		{"seed_tsk_archived", "seed_cmt_board"},
+	} {
+		if err := in.insert("task commit "+link.taskID+"/"+link.commitID,
+			`INSERT OR IGNORE INTO task_commits(task_id,commit_id,linked_by,created_at) VALUES(?,?,?,?)`,
+			link.taskID, link.commitID, "manager", seededAt); err != nil {
+			return err
+		}
+	}
+
+	for _, record := range []struct {
+		label string
+		query string
+		args  []any
+	}{
+		{"agent run seed_run_pending", `INSERT OR IGNORE INTO agent_runs(id,task_id,agent_id,status,result,created_at) VALUES(?,?,?,?,?,?)`,
+			[]any{"seed_run_pending", "seed_tsk_pending", "seed-agent", "submitted", "完成 API 错误提示调整。", seededAt}},
+		{"approval seed_app_review", `INSERT OR IGNORE INTO approvals(id,task_id,decision,note,approver_id,created_at) VALUES(?,?,?,?,?,?)`,
+			[]any{"seed_app_review", "seed_tsk_review", domain.ReviewApproved, "人工确认开发结果，可以进入代码复核。", "manager", seededAt}},
+		{"review seed_rev_test", `INSERT OR IGNORE INTO reviews(id,task_id,verdict,note,reviewer_id,created_at) VALUES(?,?,?,?,?,?)`,
+			[]any{"seed_rev_test", "seed_tsk_test", domain.ReviewApproved, "实现符合预期，可以进入测试。", "manager", seededAt}},
+		{"test record seed_tst_passed", `INSERT OR IGNORE INTO test_records(id,task_id,verdict,note,tester_id,created_at) VALUES(?,?,?,?,?,?)`,
+			[]any{"seed_tst_passed", "seed_tsk_passed", domain.TestPassed, "回归测试通过。", "manager", seededAt}},
+		{"test record seed_tst_failed", `INSERT OR IGNORE INTO test_records(id,task_id,verdict,note,tester_id,created_at) VALUES(?,?,?,?,?,?)`,
+			[]any{"seed_tst_failed", "seed_tsk_failed_parent", domain.TestFailed, "移动端布局存在溢出。", "manager", seededAt}},
+		{"archive seed_arc_release", `INSERT OR IGNORE INTO archives(id,task_id,version,content,created_by,created_at) VALUES(?,?,?,?,?,?)`,
+			[]any{"seed_arc_release", "seed_tsk_archived", 1, "已完成登录流程优化，并通过测试验收。", "manager", seededAt}},
+		{"archive ref seed_tsk_reference", `INSERT OR IGNORE INTO task_archive_refs(task_id,archive_id,created_by,created_at) VALUES(?,?,?,?)`,
+			[]any{"seed_tsk_reference", "seed_arc_release", "manager", seededAt}},
+	} {
+		if err := in.insert(record.label, record.query, record.args...); err != nil {
+			return err
+		}
+	}
+
+	for _, task := range demoTasks() {
+		if err := in.insert("task history "+task.id,
+			`INSERT OR IGNORE INTO task_histories(id,task_id,from_stage,from_status,to_stage,to_status,actor,reason,created_at) VALUES(?,?,?,?,?,?,?,?,?)`,
+			"seed_his_"+task.id, task.id, "", "", task.stage, task.status, task.createdBy, "seed demo task", seededAt); err != nil {
+			return err
+		}
+	}
+	for _, audit := range []struct{ id, action, targetType, targetID, message string }{
+		{"seed_log_delivery", "project.create", "project", "seed_prj_delivery", "[Demo] AgenticKanban Delivery"},
+		{"seed_log_portal", "project.create", "project", "seed_prj_portal", "[Demo] Internal Portal"},
+		{"seed_log_archive", "archive.create", "task", "seed_tsk_archived", "1"},
+	} {
+		if err := in.insert("audit log "+audit.id,
+			`INSERT OR IGNORE INTO audit_logs(id,actor,action,target_type,target_id,message,created_at) VALUES(?,?,?,?,?,?,?)`,
+			audit.id, "manager", audit.action, audit.targetType, audit.targetID, audit.message, seededAt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (in *inserter) insert(label, query string, args ...any) error {
+	result, err := in.tx.ExecContext(in.ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("insert %s: %w", label, err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("count inserted %s: %w", label, err)
+	}
+	if n == 0 {
+		in.summary.Skipped++
+	} else {
+		in.summary.Created += int(n)
+	}
+	return nil
+}
+
+type taskFixture struct {
+	id, projectID, parentID, title, description, stage, status, agentID, createdBy string
+	agentReady, locked                                                             bool
+}
+
+func demoTasks() []taskFixture {
+	return []taskFixture{
+		{"seed_tsk_requirements", "seed_prj_delivery", "", "[Demo] 梳理通知中心需求", "需求澄清阶段示例任务。", domain.StageRequirementClarification, domain.StatusNotReady, "", "manager", false, false},
+		{"seed_tsk_breakdown", "seed_prj_delivery", "", "[Demo] 拆解权限管理模块", "技术拆解阶段示例任务。", domain.StageTechnicalBreakdown, domain.StatusAgenticReady, "", "manager", true, false},
+		{"seed_tsk_ready", "seed_prj_delivery", "", "[Demo] 优化项目筛选", "等待 Agent 领取的开发任务。", domain.StageDevelopmentExecution, domain.StatusAgenticReady, "", "manager", true, false},
+		{"seed_tsk_in_progress", "seed_prj_delivery", "", "[Demo] 增加任务搜索", "Agent 正在执行的开发任务。", domain.StageDevelopmentExecution, domain.StatusInProgress, "seed-agent", "manager", false, false},
+		{"seed_tsk_pending", "seed_prj_delivery", "", "[Demo] 调整 API 错误提示", "Agent 已提交，等待人工确认。", domain.StageDevelopmentExecution, domain.StatusPendingConfirmation, "seed-agent", "manager", false, false},
+		{"seed_tsk_locked", "seed_prj_delivery", "", "[Demo] 锁定的发布配置调整", "用于验证锁定状态展示。", domain.StageDevelopmentExecution, domain.StatusNotReady, "", "manager", false, true},
+		{"seed_tsk_review", "seed_prj_delivery", "", "[Demo] 增加看板拖拽交互", "代码复核阶段示例任务。", domain.StageCodeReview, domain.StatusAgenticReady, "", "manager", true, false},
+		{"seed_tsk_test", "seed_prj_delivery", "", "[Demo] 加强 Session 校验", "测试验收阶段示例任务。", domain.StageTestAcceptance, domain.StatusAgenticReady, "", "manager", true, false},
+		{"seed_tsk_passed", "seed_prj_delivery", "", "[Demo] 完成仓库配置表单", "测试通过、等待归档的示例任务。", domain.StageDoneArchive, domain.StatusTestPassed, "", "manager", false, false},
+		{"seed_tsk_archived", "seed_prj_delivery", "", "[Demo] 优化登录流程", "已经完成归档的示例任务。", domain.StageDoneArchive, domain.StatusArchived, "", "manager", false, false},
+		{"seed_tsk_failed_parent", "seed_prj_delivery", "", "[Demo] 修复响应式看板布局", "测试失败并已产生缺陷子任务。", domain.StageDevelopmentExecution, domain.StatusNeedsChanges, "", "manager", false, false},
+		{"seed_tsk_defect", "seed_prj_delivery", "seed_tsk_failed_parent", "[Demo] 缺陷修复：移动端布局溢出", "由失败测试产生的缺陷子任务。", domain.StageDevelopmentExecution, domain.StatusAgenticReady, "", "manager", true, false},
+		{"seed_tsk_reference", "seed_prj_delivery", "", "[Demo] 复用登录流程归档", "引用历史归档的任务。", domain.StageRequirementClarification, domain.StatusNotReady, "", "manager", false, false},
+		{"seed_tsk_portal", "seed_prj_portal", "", "[Demo] 规划内部门户导航", "辅助演示项目中的示例任务。", domain.StageRequirementClarification, domain.StatusNotReady, "", "manager", false, false},
+	}
+}
+
+func nullable(value string) any {
+	if value == "" {
+		return nil
+	}
+	return value
+}

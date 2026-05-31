@@ -45,7 +45,7 @@ export function AdminShell({ children, title, projectID }: AdminShellProps) {
           ))}
         </nav>
       </aside>
-      <div className="md:pl-64" data-test-id="admin-workspace">
+      <div className="min-w-0 md:pl-64" data-test-id="admin-workspace">
         <header className="flex h-16 items-center justify-between bg-glass px-4 shadow-card outline outline-1 outline-outline backdrop-blur-[20px] md:px-8" data-test-id="admin-topbar">
           <h1 className="text-lg font-semibold tracking-tight" data-test-id="admin-page-title">{title}</h1>
           <div className="flex items-center gap-2" data-test-id="admin-topbar-actions">

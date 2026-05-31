@@ -22,13 +22,15 @@ export function BoardPage() {
       </div>
       <ErrorAlert error={stages.error || tasks.error} />
       {tasks.isPending ? <Skeleton className="h-80 rounded-xl" data-test-id="board-loading" /> : null}
-      <div className="grid min-w-max grid-cols-6 gap-4 overflow-x-auto pb-4" data-test-id="board-columns">
-        {columns.map((stage) => (
-          <section className="material-panel w-72 rounded-xl p-3" data-test-id={`board-column-${stage.Key}`} key={stage.Key}>
-            <h3 className="mb-3 text-sm font-semibold" data-test-id={`board-column-title-${stage.Key}`}>{stage.Name}</h3>
-            <div className="space-y-3" data-test-id={`board-column-tasks-${stage.Key}`}>{tasks.data?.filter((task) => task.StageKey === stage.Key).map((task) => <TaskCard key={task.ID} projectID={projectID} task={task} />)}</div>
-          </section>
-        ))}
+      <div className="overflow-x-auto pb-4" data-test-id="board-columns">
+        <div className="grid min-w-max grid-cols-6 gap-4" data-test-id="board-columns-grid">
+          {columns.map((stage) => (
+            <section className="material-panel w-72 rounded-xl p-3" data-test-id={`board-column-${stage.Key}`} key={stage.Key}>
+              <h3 className="mb-3 text-sm font-semibold" data-test-id={`board-column-title-${stage.Key}`}>{stage.Name}</h3>
+              <div className="space-y-3" data-test-id={`board-column-tasks-${stage.Key}`}>{tasks.data?.filter((task) => task.StageKey === stage.Key).map((task) => <TaskCard key={task.ID} projectID={projectID} task={task} />)}</div>
+            </section>
+          ))}
+        </div>
       </div>
     </AdminShell>
   )
