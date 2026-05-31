@@ -200,4 +200,26 @@ describe('admin application', () => {
     expect(screen.getByTestId('admin-theme-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('admin-content')).toBeInTheDocument()
   })
+
+  it('toggles the authenticated shell sidebar from the top bar', () => {
+    render(
+      <ThemeProvider>
+        <MemoryRouter>
+          <AdminShell title="任务看板" projectID="project-1">
+            <div>看板内容</div>
+          </AdminShell>
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    fireEvent.click(screen.getByTestId('admin-sidebar-toggle'))
+
+    expect(screen.queryByTestId('admin-sidebar')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '展开侧栏' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '展开侧栏' }))
+
+    expect(screen.getByTestId('admin-sidebar')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '收起侧栏' })).toBeInTheDocument()
+  })
 })
