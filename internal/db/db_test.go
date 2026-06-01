@@ -1,7 +1,6 @@
 package db_test
 
 import (
-	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,7 +11,7 @@ import (
 )
 
 func TestMigrateUpgradesExistingInitialSchema(t *testing.T) {
-	database, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "test.db")+"?_pragma=foreign_keys(1)")
+	database, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,14 +40,20 @@ func TestMigrateUpgradesExistingInitialSchema(t *testing.T) {
 	if _, err := database.Exec(`INSERT INTO tasks(id,project_id,title,stage_key,status,created_by) VALUES('task-1','project-1','old','done_archive','archived','u')`); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := database.Exec(`INSERT INTO tasks(id,project_id,title,stage_key,status,locked,created_by) VALUES('task-2','project-1','retry','technical_breakdown','pending_confirmation',1,'u')`); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := db.Migrate(database, "../../migrations"); err != nil {
 		t.Fatal(err)
 	}
 
-	var completed int
-	if err := database.QueryRow(`SELECT completed FROM tasks LIMIT 1`).Scan(&completed); err != sql.ErrNoRows {
-		t.Fatalf("old task query err=%v want=%v", err, sql.ErrNoRows)
+	var status string
+	if err := database.QueryRow(`SELECT status FROM tasks WHERE id='task-2'`).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "pending_human_review" {
+		t.Fatalf("status=%s", status)
 	}
 	var count int
 	if err := database.QueryRow(`SELECT COUNT(1) FROM board_stages WHERE stage_key='done_archive'`).Scan(&count); err != nil {
@@ -65,5 +70,23 @@ func TestMigrateUpgradesExistingInitialSchema(t *testing.T) {
 	}
 	if count != 0 {
 		t.Fatalf("legacy archive tables=%d", count)
+	}
+	if err := database.QueryRow(`SELECT COUNT(1) FROM pragma_table_info('tasks') WHERE name='locked'`).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("locked columns=%d", count)
+	}
+	if err := database.QueryRow(`SELECT COUNT(1) FROM pragma_table_info('agent_runs') WHERE name IN ('work_type','passed')`).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Fatalf("agent run workflow columns=%d", count)
+	}
+	if err := database.QueryRow(`SELECT COUNT(1) FROM pragma_table_info('approvals') WHERE name='agent_run_id'`).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("approval agent run columns=%d", count)
 	}
 }

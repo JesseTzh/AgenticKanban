@@ -38,6 +38,8 @@ m = g(r.sub, p.sub) && (p.obj == "*" || p.obj == r.obj) && (p.act == "*" || p.ac
 	_, _ = e.AddPolicy("developer", "project", "read")
 	_, _ = e.AddPolicy("developer", "task", "read")
 	_, _ = e.AddPolicy("developer", "task", "update")
+	_, _ = e.AddPolicy("developer", "agent", "read")
+	_, _ = e.AddPolicy("developer", "agent", "write")
 	return &Enforcer{e: e}, nil
 }
 

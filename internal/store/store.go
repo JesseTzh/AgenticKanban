@@ -16,9 +16,10 @@ import (
 
 var ErrNotFound = errors.New("not found")
 var ErrInvalidTransition = errors.New("invalid transition")
-var ErrLocked = errors.New("task locked")
 var ErrCommitRequired = errors.New("commit required before code review")
 var ErrInvalidReference = errors.New("invalid task reference")
+var ErrAgentClaimMismatch = errors.New("task claimed by another agent key")
+var ErrCommitSHANotFound = errors.New("commit sha not found")
 
 type Store struct {
 	db  *sql.DB
@@ -155,7 +156,7 @@ func (s *Store) CreateTask(ctx context.Context, t domain.Task, actor string) (do
 		t.Status = domain.StatusNotReady
 	}
 	t.AgentReady = t.Status == domain.StatusAgenticReady
-	_, err := s.db.ExecContext(ctx, `INSERT INTO tasks(id,project_id,parent_id,title,description,stage_key,status,agent_ready,locked,completed,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?)`, t.ID, t.ProjectID, nullable(t.ParentID), t.Title, t.Description, t.StageKey, t.Status, t.AgentReady, t.Locked, t.Completed, actor)
+	_, err := s.db.ExecContext(ctx, `INSERT INTO tasks(id,project_id,parent_id,title,description,stage_key,status,agent_ready,completed,created_by) VALUES(?,?,?,?,?,?,?,?,?,?)`, t.ID, t.ProjectID, nullable(t.ParentID), t.Title, t.Description, t.StageKey, t.Status, t.AgentReady, t.Completed, actor)
 	if err == nil {
 		s.hist(ctx, t.ID, "", "", t.StageKey, t.Status, actor, "create task")
 		s.audit(ctx, actor, "task.create", "task", t.ID, t.Title)
@@ -163,7 +164,7 @@ func (s *Store) CreateTask(ctx context.Context, t domain.Task, actor string) (do
 	return t, err
 }
 func (s *Store) ListTasks(ctx context.Context, projectID string) ([]domain.Task, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,locked,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE project_id=? AND deleted_at IS NULL ORDER BY created_at DESC`, projectID)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE project_id=? AND deleted_at IS NULL ORDER BY created_at DESC`, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +172,8 @@ func (s *Store) ListTasks(ctx context.Context, projectID string) ([]domain.Task,
 	return scanTasks(rows)
 }
 func (s *Store) ListAgentReadyTasks(ctx context.Context) ([]domain.Task, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,locked,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE agent_ready=1 AND locked=0 AND completed=0 AND status=? AND deleted_at IS NULL ORDER BY created_at`, domain.StatusAgenticReady)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE agent_ready=1 AND completed=0 AND status=? AND stage_key IN (?,?,?) AND deleted_at IS NULL ORDER BY created_at`,
+		domain.StatusAgenticReady, domain.StageRequirementClarification, domain.StageTechnicalBreakdown, domain.StageCodeReview)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +181,7 @@ func (s *Store) ListAgentReadyTasks(ctx context.Context) ([]domain.Task, error) 
 	return scanTasks(rows)
 }
 func (s *Store) GetTask(ctx context.Context, id string) (domain.Task, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,locked,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE id=? AND deleted_at IS NULL`, id)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE id=? AND deleted_at IS NULL`, id)
 	if err != nil {
 		return domain.Task{}, err
 	}
@@ -207,21 +209,10 @@ func (s *Store) DeleteTask(ctx context.Context, id, actor string) error {
 	}
 	return err
 }
-func (s *Store) LockTask(ctx context.Context, id string, locked bool, actor string) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE tasks SET locked=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`, locked, id)
-	if err == nil {
-		s.audit(ctx, actor, "task.lock", "task", id, fmt.Sprint(locked))
-	}
-	return err
-}
-
 func (s *Store) TransitionTask(ctx context.Context, id, toStage, toStatus, actor, reason string) error {
 	t, err := s.GetTask(ctx, id)
 	if err != nil {
 		return err
-	}
-	if t.Locked {
-		return ErrLocked
 	}
 	if !domain.IsDefaultStage(toStage) {
 		return ErrInvalidTransition
@@ -248,10 +239,7 @@ func (s *Store) ClaimTask(ctx context.Context, id, agentID string) error {
 	if err != nil {
 		return err
 	}
-	if t.Locked {
-		return ErrLocked
-	}
-	if !t.AgentReady || t.Status != domain.StatusAgenticReady {
+	if !t.AgentReady || t.Status != domain.StatusAgenticReady || !isAgentStage(t.StageKey) {
 		return ErrInvalidTransition
 	}
 	_, err = s.db.ExecContext(ctx, `UPDATE tasks SET status=?,agent_ready=0,agent_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`, domain.StatusInProgress, agentID, id)
@@ -261,59 +249,161 @@ func (s *Store) ClaimTask(ctx context.Context, id, agentID string) error {
 	}
 	return err
 }
-func (s *Store) SubmitTask(ctx context.Context, id, agentID, result string, commitIDs []string) error {
+func (s *Store) SubmitBreakdown(ctx context.Context, id, agentID, result string) error {
 	t, err := s.GetTask(ctx, id)
 	if err != nil {
 		return err
 	}
+	if err := requireClaimedTask(t, agentID, domain.StageRequirementClarification); err != nil {
+		return err
+	}
+	return s.submitAgentRun(ctx, t, agentID, domain.AgentWorkTechnicalBreakdown, result, nil, domain.StageTechnicalBreakdown, domain.StatusPendingHumanReview, false, nil)
+}
+
+func (s *Store) SubmitDevelopment(ctx context.Context, id, agentID, result string, commitSHAs []string) error {
+	t, err := s.GetTask(ctx, id)
+	if err != nil {
+		return err
+	}
+	if err := requireClaimedTask(t, agentID, domain.StageTechnicalBreakdown); err != nil {
+		return err
+	}
+	return s.submitAgentRun(ctx, t, agentID, domain.AgentWorkDevelopment, result, nil, domain.StageCodeReview, domain.StatusAgenticReady, true, commitSHAs)
+}
+
+func (s *Store) SubmitCodeReview(ctx context.Context, id, agentID, result string, passed bool) error {
+	t, err := s.GetTask(ctx, id)
+	if err != nil {
+		return err
+	}
+	if err := requireClaimedTask(t, agentID, domain.StageCodeReview); err != nil {
+		return err
+	}
+	return s.submitAgentRun(ctx, t, agentID, domain.AgentWorkCodeReview, result, &passed, domain.StageCodeReview, domain.StatusPendingHumanReview, false, nil)
+}
+
+func (s *Store) submitAgentRun(ctx context.Context, t domain.Task, agentID, workType, result string, passed *bool, toStage, toStatus string, agentReady bool, commitSHAs []string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO agent_runs(id,task_id,agent_id,status,result) VALUES(?,?,?,?,?)`, utils.NewID("run"), id, agentID, "submitted", result); err != nil {
-		_ = tx.Rollback()
-		return err
+	defer tx.Rollback()
+	var commitIDs []string
+	if workType == domain.AgentWorkDevelopment {
+		commitIDs, err = resolveProjectCommitIDs(ctx, tx, t.ProjectID, commitSHAs)
+		if err != nil {
+			return err
+		}
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE tasks SET status=?,agent_ready=0,updated_at=CURRENT_TIMESTAMP WHERE id=?`, domain.StatusPendingConfirmation, id); err != nil {
-		_ = tx.Rollback()
+	runID := utils.NewID("run")
+	if _, err = tx.ExecContext(ctx, `INSERT INTO agent_runs(id,task_id,agent_id,status,result,work_type,passed) VALUES(?,?,?,?,?,?,?)`, runID, t.ID, agentID, "submitted", result, workType, passed); err != nil {
 		return err
 	}
 	for _, cid := range commitIDs {
-		if strings.TrimSpace(cid) == "" {
-			continue
+		if _, err = tx.ExecContext(ctx, `INSERT OR IGNORE INTO task_commits(task_id,commit_id,linked_by) VALUES(?,?,?)`, t.ID, cid, agentID); err != nil {
+			return err
 		}
-		_, _ = tx.ExecContext(ctx, `INSERT OR IGNORE INTO task_commits(task_id,commit_id,linked_by) VALUES(?,?,?)`, id, cid, agentID)
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO task_histories(id,task_id,from_stage,from_status,to_stage,to_status,actor,reason) VALUES(?,?,?,?,?,?,?,?)`, utils.NewID("his"), id, t.StageKey, t.Status, t.StageKey, domain.StatusPendingConfirmation, agentID, "agent submit"); err != nil {
-		_ = tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `UPDATE tasks SET stage_key=?,status=?,agent_ready=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`, toStage, toStatus, agentReady, t.ID); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor,action,target_type,target_id,message) VALUES(?,?,?,?,?,?)`, utils.NewID("log"), agentID, "agent.submit", "task", id, result); err != nil {
-		_ = tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `INSERT INTO task_histories(id,task_id,from_stage,from_status,to_stage,to_status,actor,reason) VALUES(?,?,?,?,?,?,?,?)`, utils.NewID("his"), t.ID, t.StageKey, t.Status, toStage, toStatus, agentID, "agent submit: "+workType); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor,action,target_type,target_id,message) VALUES(?,?,?,?,?,?)`, utils.NewID("log"), agentID, "agent.submit."+workType, "task", t.ID, result); err != nil {
 		return err
 	}
 	return tx.Commit()
+}
+
+func resolveProjectCommitIDs(ctx context.Context, tx *sql.Tx, projectID string, shas []string) ([]string, error) {
+	var ids []string
+	seen := map[string]bool{}
+	for _, sha := range shas {
+		sha = strings.TrimSpace(sha)
+		if sha == "" || seen[sha] {
+			continue
+		}
+		seen[sha] = true
+		var id string
+		if err := tx.QueryRowContext(ctx, `SELECT id FROM commits WHERE project_id=? AND sha=? LIMIT 1`, projectID, sha).Scan(&id); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, fmt.Errorf("%w: %s", ErrCommitSHANotFound, sha)
+			}
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if len(ids) == 0 {
+		return nil, ErrCommitRequired
+	}
+	return ids, nil
+}
+
+func requireClaimedTask(t domain.Task, agentID, stage string) error {
+	if t.StageKey != stage || t.Status != domain.StatusInProgress {
+		return ErrInvalidTransition
+	}
+	if t.AgentID != agentID {
+		return ErrAgentClaimMismatch
+	}
+	return nil
+}
+
+func isAgentStage(stage string) bool {
+	return stage == domain.StageRequirementClarification || stage == domain.StageTechnicalBreakdown || stage == domain.StageCodeReview
 }
 func (s *Store) ApproveTask(ctx context.Context, id, actor, decision, note string) error {
 	t, err := s.GetTask(ctx, id)
 	if err != nil {
 		return err
 	}
-	toStage, toStatus := t.StageKey, domain.StatusAgenticReady
-	if decision == "approved" {
+	if t.Status != domain.StatusPendingHumanReview || (decision != domain.ReviewApproved && decision != domain.ReviewRejected) {
+		return ErrInvalidTransition
+	}
+	runID, passed, err := s.latestAgentRun(ctx, id)
+	if err != nil {
+		return err
+	}
+	toStage, toStatus := t.StageKey, domain.StatusNeedRedo
+	if t.StageKey == domain.StageTechnicalBreakdown && decision == domain.ReviewApproved {
 		toStatus = domain.StatusAgenticReady
-		if t.StageKey == domain.StageTechnicalBreakdown {
-			toStage = domain.StageCodeReview
-		}
 	}
-	if decision == "rejected" {
-		toStatus = domain.StatusNeedsChanges
+	if t.StageKey == domain.StageCodeReview && decision == domain.ReviewApproved && passed != nil && *passed {
+		toStage, toStatus = domain.StageTestAcceptance, domain.StatusNotReady
 	}
-	_, err = s.db.ExecContext(ctx, `INSERT INTO approvals(id,task_id,decision,note,approver_id) VALUES(?,?,?,?,?)`, utils.NewID("app"), id, decision, note, actor)
+	if t.StageKey == domain.StageCodeReview && toStatus == domain.StatusNeedRedo {
+		toStage = domain.StageTechnicalBreakdown
+	}
+	_, err = s.db.ExecContext(ctx, `INSERT INTO approvals(id,task_id,agent_run_id,decision,note,approver_id) VALUES(?,?,?,?,?,?)`, utils.NewID("app"), id, runID, decision, note, actor)
 	if err != nil {
 		return err
 	}
 	return s.TransitionTask(ctx, id, toStage, toStatus, actor, "approval: "+decision)
+}
+
+func (s *Store) latestAgentRun(ctx context.Context, taskID string) (string, *bool, error) {
+	var id string
+	var passed sql.NullBool
+	err := s.db.QueryRowContext(ctx, `SELECT id,passed FROM agent_runs WHERE task_id=? ORDER BY created_at DESC,id DESC LIMIT 1`, taskID).Scan(&id, &passed)
+	if err != nil {
+		return "", nil, one(err)
+	}
+	if !passed.Valid {
+		return id, nil, nil
+	}
+	return id, &passed.Bool, nil
+}
+
+func (s *Store) MarkTaskAgentReady(ctx context.Context, taskID, actor, reason string) error {
+	t, err := s.GetTask(ctx, taskID)
+	if err != nil {
+		return err
+	}
+	if t.Completed || (t.StageKey != domain.StageRequirementClarification && t.StageKey != domain.StageTechnicalBreakdown) {
+		return ErrInvalidTransition
+	}
+	return s.TransitionTask(ctx, taskID, t.StageKey, domain.StatusAgenticReady, actor, reason)
 }
 
 func (s *Store) CreateAgentToken(ctx context.Context, name, tokenHash, actor string) (id string, err error) {
@@ -329,20 +419,26 @@ func (s *Store) GetAgentTokenIDByHash(ctx context.Context, tokenHash string) (st
 	err := s.db.QueryRowContext(ctx, `SELECT id FROM agent_tokens WHERE token_hash=? AND enabled=1`, tokenHash).Scan(&id)
 	return id, one(err)
 }
-func (s *Store) ListAgentTokens(ctx context.Context) ([]map[string]any, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,name,enabled,created_by,created_at FROM agent_tokens ORDER BY created_at DESC`)
+func (s *Store) ListAgentTokens(ctx context.Context, requesterID string, includeAll bool) ([]domain.AgentTokenMetadata, error) {
+	query := `SELECT t.id,t.name,t.created_by,u.username,t.created_at FROM agent_tokens t JOIN users u ON u.id=t.created_by`
+	var args []any
+	if !includeAll {
+		query += ` WHERE t.created_by=?`
+		args = append(args, requesterID)
+	}
+	query += ` ORDER BY t.created_at DESC`
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []map[string]any
+	var out []domain.AgentTokenMetadata
 	for rows.Next() {
-		var id, name, createdBy, createdAt string
-		var enabled bool
-		if err := rows.Scan(&id, &name, &enabled, &createdBy, &createdAt); err != nil {
+		var t domain.AgentTokenMetadata
+		if err := rows.Scan(&t.ID, &t.Name, &t.OwnerID, &t.OwnerUsername, &t.CreatedAt); err != nil {
 			return nil, err
 		}
-		out = append(out, map[string]any{"id": id, "name": name, "enabled": enabled, "created_by": createdBy, "created_at": createdAt})
+		out = append(out, t)
 	}
 	return out, rows.Err()
 }
@@ -464,16 +560,6 @@ func (s *Store) CountTaskCommits(ctx context.Context, taskID string) (int, error
 	return n, err
 }
 
-func (s *Store) CreateReview(ctx context.Context, taskID, verdict, note, actor string) error {
-	_, err := s.db.ExecContext(ctx, `INSERT INTO reviews(id,task_id,verdict,note,reviewer_id) VALUES(?,?,?,?,?)`, utils.NewID("rev"), taskID, verdict, note, actor)
-	if err != nil {
-		return err
-	}
-	if verdict == domain.ReviewApproved {
-		return s.TransitionTask(ctx, taskID, domain.StageTestAcceptance, domain.StatusAgenticReady, actor, "review approved")
-	}
-	return s.TransitionTask(ctx, taskID, domain.StageTechnicalBreakdown, domain.StatusNeedsChanges, actor, "review rejected")
-}
 func (s *Store) CreateTestRecord(ctx context.Context, taskID, verdict, note, actor string) (string, error) {
 	_, err := s.db.ExecContext(ctx, `INSERT INTO test_records(id,task_id,verdict,note,tester_id) VALUES(?,?,?,?,?)`, utils.NewID("tst"), taskID, verdict, note, actor)
 	if err != nil {
@@ -482,12 +568,7 @@ func (s *Store) CreateTestRecord(ctx context.Context, taskID, verdict, note, act
 	if verdict != domain.TestFailed {
 		return "", ErrInvalidTransition
 	}
-	parent, err := s.GetTask(ctx, taskID)
-	if err != nil {
-		return "", err
-	}
-	defect, _ := s.CreateTask(ctx, domain.Task{ProjectID: parent.ProjectID, ParentID: taskID, Title: "缺陷修复：" + parent.Title, Description: note, StageKey: domain.StageTechnicalBreakdown, Status: domain.StatusAgenticReady}, actor)
-	return defect.ID, s.TransitionTask(ctx, taskID, domain.StageTechnicalBreakdown, domain.StatusNeedsChanges, actor, "test failed")
+	return "", s.TransitionTask(ctx, taskID, domain.StageTechnicalBreakdown, domain.StatusNeedRedo, actor, "test failed: "+note)
 }
 func (s *Store) CompleteTask(ctx context.Context, taskID, actor string) error {
 	t, err := s.GetTask(ctx, taskID)
@@ -503,8 +584,66 @@ func (s *Store) CompleteTask(ctx context.Context, taskID, actor string) error {
 	}
 	return err
 }
+func (s *Store) ListHumanReviews(ctx context.Context, taskID string) ([]domain.HumanReview, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id,task_id,COALESCE(agent_run_id,''),decision,note,approver_id,created_at FROM approvals WHERE task_id=? ORDER BY created_at,id`, taskID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.HumanReview
+	for rows.Next() {
+		var review domain.HumanReview
+		if err := rows.Scan(&review.ID, &review.TaskID, &review.AgentRunID, &review.Decision, &review.Note, &review.ReviewerID, &review.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, review)
+	}
+	return out, rows.Err()
+}
+func (s *Store) ListAgentTasks(ctx context.Context) ([]domain.AgentTask, error) {
+	tasks, err := s.ListAgentReadyTasks(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domain.AgentTask, 0, len(tasks))
+	for _, task := range tasks {
+		reviews, err := s.ListHumanReviews(ctx, task.ID)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, domain.AgentTask{Task: task, HumanReviews: reviews})
+	}
+	return out, nil
+}
+func (s *Store) GetAgentWorkDetail(ctx context.Context, taskID string) (domain.AgentWorkDetail, error) {
+	if _, err := s.GetTask(ctx, taskID); err != nil {
+		return domain.AgentWorkDetail{}, err
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT r.id,r.task_id,r.agent_id,t.name,u.username,r.work_type,r.status,r.result,r.passed,r.created_at FROM agent_runs r JOIN agent_tokens t ON t.id=r.agent_id JOIN users u ON u.id=t.created_by WHERE r.task_id=? ORDER BY r.created_at,r.id`, taskID)
+	if err != nil {
+		return domain.AgentWorkDetail{}, err
+	}
+	defer rows.Close()
+	var runs []domain.AgentRun
+	for rows.Next() {
+		var run domain.AgentRun
+		var passed sql.NullBool
+		if err := rows.Scan(&run.ID, &run.TaskID, &run.AgentID, &run.AgentKeyName, &run.AgentOwnerUsername, &run.WorkType, &run.Status, &run.Result, &passed, &run.CreatedAt); err != nil {
+			return domain.AgentWorkDetail{}, err
+		}
+		if passed.Valid {
+			run.Passed = &passed.Bool
+		}
+		runs = append(runs, run)
+	}
+	if err := rows.Err(); err != nil {
+		return domain.AgentWorkDetail{}, err
+	}
+	reviews, err := s.ListHumanReviews(ctx, taskID)
+	return domain.AgentWorkDetail{Runs: runs, HumanReviews: reviews}, err
+}
 func (s *Store) ListTaskRefs(ctx context.Context, taskID string) ([]domain.Task, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT t.id,t.project_id,COALESCE(t.parent_id,''),t.title,t.description,t.stage_key,t.status,t.agent_ready,t.locked,t.completed,COALESCE(t.agent_id,''),t.created_by,t.created_at,t.updated_at FROM task_refs r JOIN tasks t ON t.id=r.referenced_task_id WHERE r.task_id=? AND t.deleted_at IS NULL ORDER BY r.created_at DESC`, taskID)
+	rows, err := s.db.QueryContext(ctx, `SELECT t.id,t.project_id,COALESCE(t.parent_id,''),t.title,t.description,t.stage_key,t.status,t.agent_ready,t.completed,COALESCE(t.agent_id,''),t.created_by,t.created_at,t.updated_at FROM task_refs r JOIN tasks t ON t.id=r.referenced_task_id WHERE r.task_id=? AND t.deleted_at IS NULL ORDER BY r.created_at DESC`, taskID)
 	if err != nil {
 		return nil, err
 	}
@@ -537,7 +676,7 @@ func scanTasks(rows *sql.Rows) ([]domain.Task, error) {
 	var out []domain.Task
 	for rows.Next() {
 		var t domain.Task
-		if err := rows.Scan(&t.ID, &t.ProjectID, &t.ParentID, &t.Title, &t.Description, &t.StageKey, &t.Status, &t.AgentReady, &t.Locked, &t.Completed, &t.AgentID, &t.CreatedBy, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.ProjectID, &t.ParentID, &t.Title, &t.Description, &t.StageKey, &t.Status, &t.AgentReady, &t.Completed, &t.AgentID, &t.CreatedBy, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, t)

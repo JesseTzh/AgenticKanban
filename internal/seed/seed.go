@@ -81,8 +81,8 @@ func (in *inserter) insertFixtures(sessionSecret string) error {
 
 	for _, task := range demoTasks() {
 		if err := in.insert("task "+task.id,
-			`INSERT OR IGNORE INTO tasks(id,project_id,parent_id,title,description,stage_key,status,agent_ready,locked,completed,agent_id,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-			task.id, task.projectID, nullable(task.parentID), task.title, task.description, task.stage, task.status, task.agentReady, task.locked, task.completed, nullable(task.agentID), task.createdBy, seededAt, seededAt); err != nil {
+			`INSERT OR IGNORE INTO tasks(id,project_id,parent_id,title,description,stage_key,status,agent_ready,completed,agent_id,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			task.id, task.projectID, nullable(task.parentID), task.title, task.description, task.stage, task.status, task.agentReady, task.completed, nullable(task.agentID), task.createdBy, seededAt, seededAt); err != nil {
 			return err
 		}
 	}
@@ -180,18 +180,18 @@ func (in *inserter) insert(label, query string, args ...any) error {
 
 type taskFixture struct {
 	id, projectID, parentID, title, description, stage, status, agentID, createdBy string
-	agentReady, locked, completed                                                  bool
+	agentReady, completed                                                          bool
 }
 
 func demoTasks() []taskFixture {
 	return []taskFixture{
-		{"seed_tsk_requirements", "seed_prj_delivery", "", "[Demo] 梳理通知中心需求", "需求澄清阶段示例任务。", domain.StageRequirementClarification, domain.StatusNotReady, "", "manager", false, false, false},
-		{"seed_tsk_breakdown", "seed_prj_delivery", "", "[Demo] 拆解权限管理模块", "技术拆解阶段示例任务。", domain.StageTechnicalBreakdown, domain.StatusAgenticReady, "", "manager", true, false, false},
-		{"seed_tsk_review", "seed_prj_delivery", "", "[Demo] 增加看板拖拽交互", "代码审核阶段示例任务。", domain.StageCodeReview, domain.StatusAgenticReady, "", "manager", true, false, false},
-		{"seed_tsk_test", "seed_prj_delivery", "", "[Demo] 加强 Session 校验", "测试验收阶段示例任务。", domain.StageTestAcceptance, domain.StatusAgenticReady, "", "manager", true, false, false},
-		{"seed_tsk_completed", "seed_prj_delivery", "", "[Demo] 优化登录流程", "已经人工确认完成的示例任务。", domain.StageTestAcceptance, domain.StatusNotReady, "", "manager", false, false, true},
-		{"seed_tsk_reference", "seed_prj_delivery", "", "[Demo] 复用登录流程任务", "引用历史任务的示例任务。", domain.StageRequirementClarification, domain.StatusNotReady, "", "manager", false, false, false},
-		{"seed_tsk_portal", "seed_prj_portal", "", "[Demo] 规划内部门户导航", "辅助演示项目中的示例任务。", domain.StageRequirementClarification, domain.StatusNotReady, "", "manager", false, false, false},
+		{"seed_tsk_requirements", "seed_prj_delivery", "", "[Demo] 梳理通知中心需求", "需求澄清阶段示例任务。", domain.StageRequirementClarification, domain.StatusNotReady, "", "manager", false, false},
+		{"seed_tsk_breakdown", "seed_prj_delivery", "", "[Demo] 拆解权限管理模块", "技术拆解阶段示例任务。", domain.StageTechnicalBreakdown, domain.StatusAgenticReady, "", "manager", true, false},
+		{"seed_tsk_review", "seed_prj_delivery", "", "[Demo] 增加看板拖拽交互", "代码审核阶段示例任务。", domain.StageCodeReview, domain.StatusAgenticReady, "", "manager", true, false},
+		{"seed_tsk_test", "seed_prj_delivery", "", "[Demo] 加强 Session 校验", "测试验收阶段示例任务。", domain.StageTestAcceptance, domain.StatusNotReady, "", "manager", false, false},
+		{"seed_tsk_completed", "seed_prj_delivery", "", "[Demo] 优化登录流程", "已经人工确认完成的示例任务。", domain.StageTestAcceptance, domain.StatusNotReady, "", "manager", false, true},
+		{"seed_tsk_reference", "seed_prj_delivery", "", "[Demo] 复用登录流程任务", "引用历史任务的示例任务。", domain.StageRequirementClarification, domain.StatusNotReady, "", "manager", false, false},
+		{"seed_tsk_portal", "seed_prj_portal", "", "[Demo] 规划内部门户导航", "辅助演示项目中的示例任务。", domain.StageRequirementClarification, domain.StatusNotReady, "", "manager", false, false},
 	}
 }
 

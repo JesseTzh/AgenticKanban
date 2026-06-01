@@ -10,12 +10,16 @@ const (
 	StageCodeReview               = "code_review"
 	StageTestAcceptance           = "test_acceptance"
 
-	StatusNotReady            = "not_ready"
-	StatusAgenticReady        = "agentic_ready"
-	StatusInProgress          = "in_progress"
-	StatusPendingConfirmation = "pending_confirmation"
-	StatusNeedsChanges        = "needs_changes"
-	StatusReviewPassed        = "review_passed"
+	StatusNotReady           = "not_ready"
+	StatusAgenticReady       = "agentic_ready"
+	StatusInProgress         = "in_progress"
+	StatusPendingHumanReview = "pending_human_review"
+	StatusNeedRedo           = "need_redo"
+	StatusReviewPassed       = "review_passed"
+
+	AgentWorkTechnicalBreakdown = "technical_breakdown"
+	AgentWorkDevelopment        = "development"
+	AgentWorkCodeReview         = "code_review"
 
 	ReviewApproved = "approved"
 	ReviewRejected = "rejected"
@@ -33,13 +37,32 @@ type Stage struct {
 
 type Task struct {
 	ID, ProjectID, ParentID, Title, Description, StageKey, Status string
-	AgentReady                                                    bool
-	Locked                                                        bool
-	Completed                                                     bool
+	AgentReady, Completed                                         bool
 	AgentID, CreatedBy, CreatedAt, UpdatedAt                      string
 }
 
 type TaskHistory struct{ ID, TaskID, FromStage, FromStatus, ToStage, ToStatus, Actor, Reason, CreatedAt string }
+type HumanReview struct{ ID, TaskID, AgentRunID, Decision, Note, ReviewerID, CreatedAt string }
+type AgentTask struct {
+	Task         Task
+	HumanReviews []HumanReview
+}
+type AgentRun struct {
+	ID, TaskID, AgentID, AgentKeyName, AgentOwnerUsername string
+	WorkType, Status, Result, CreatedAt                   string
+	Passed                                                *bool
+}
+type AgentWorkDetail struct {
+	Runs         []AgentRun
+	HumanReviews []HumanReview
+}
+type AgentTokenMetadata struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	OwnerID       string `json:"owner_id"`
+	OwnerUsername string `json:"owner_username"`
+	CreatedAt     string `json:"created_at"`
+}
 
 type Repository struct {
 	ID, ProjectID, Name, GitURL, WebhookSecret string

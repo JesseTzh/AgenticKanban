@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -45,90 +46,161 @@ func TestProjectCreatesDefaultBoard(t *testing.T) {
 	}
 }
 
-func TestCodeReviewRequiresCommit(t *testing.T) {
-	st := newTestStore(t)
+func createAgentToken(t *testing.T, st *store.Store, id string) {
+	t.Helper()
 	ctx := context.Background()
-	p, _ := st.CreateProject(ctx, "demo", "", "u")
-	task, err := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "dev", StageKey: domain.StageTechnicalBreakdown, Status: domain.StatusAgenticReady}, "u")
-	if err != nil {
+	if err := st.CreateUser(ctx, domain.User{ID: id + "-owner", Username: id + "-owner", PasswordHash: "hash", Role: domain.RoleDeveloper}); err != nil {
 		t.Fatal(err)
 	}
-	err = st.TransitionTask(ctx, task.ID, domain.StageCodeReview, domain.StatusAgenticReady, "u", "try review")
-	if err != store.ErrCommitRequired {
-		t.Fatalf("err=%v want ErrCommitRequired", err)
+	if _, err := st.DB().Exec(`INSERT INTO agent_tokens(id,name,token_hash,created_by) VALUES(?,?,?,?)`, id, id+" key", id+" hash", id+"-owner"); err != nil {
+		t.Fatal(err)
 	}
 }
 
-func TestApprovedTechnicalBreakdownMovesToCodeReview(t *testing.T) {
+func TestAgentWorkflowBreakdownDevelopmentAndCodeReview(t *testing.T) {
 	st := newTestStore(t)
 	ctx := context.Background()
+	createAgentToken(t, st, "agent-1")
 	p, _ := st.CreateProject(ctx, "demo", "", "u")
-	task, _ := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "dev", StageKey: domain.StageTechnicalBreakdown, Status: domain.StatusPendingConfirmation}, "u")
+	task, _ := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "feature"}, "u")
+	if err := st.MarkTaskAgentReady(ctx, task.ID, "u", "requirements ready"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.ClaimTask(ctx, task.ID, "agent-1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SubmitBreakdown(ctx, task.ID, "agent-1", "split work"); err != nil {
+		t.Fatal(err)
+	}
+	task, _ = st.GetTask(ctx, task.ID)
+	if task.StageKey != domain.StageTechnicalBreakdown || task.Status != domain.StatusPendingHumanReview || task.AgentReady {
+		t.Fatalf("after breakdown task=%+v", task)
+	}
+	if err := st.ApproveTask(ctx, task.ID, "reviewer", domain.ReviewApproved, "clear plan"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.ClaimTask(ctx, task.ID, "agent-1"); err != nil {
+		t.Fatal(err)
+	}
 	repo, _ := st.CreateRepository(ctx, domain.Repository{ProjectID: p.ID, Name: "main"}, "u")
 	commit := domain.Commit{ID: "commit-1", SHA: "abc123", Message: "done", Author: "u", Branch: "main"}
 	if err := st.SaveWebhookEventAndCommits(ctx, repo, "", nil, []domain.Commit{commit}); err != nil {
 		t.Fatal(err)
 	}
-	if err := st.LinkCommit(ctx, task.ID, commit.ID, "u"); err != nil {
+	if err := st.SubmitDevelopment(ctx, task.ID, "agent-1", "implemented", []string{"abc123"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := st.ApproveTask(ctx, task.ID, "u", "approved", "done"); err != nil {
+	task, _ = st.GetTask(ctx, task.ID)
+	if task.StageKey != domain.StageCodeReview || task.Status != domain.StatusAgenticReady || !task.AgentReady {
+		t.Fatalf("after development task=%+v", task)
+	}
+	if err := st.ClaimTask(ctx, task.ID, "agent-1"); err != nil {
 		t.Fatal(err)
 	}
-	task, err := st.GetTask(ctx, task.ID)
+	if err := st.SubmitCodeReview(ctx, task.ID, "agent-1", "looks good", true); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.ApproveTask(ctx, task.ID, "reviewer", domain.ReviewApproved, "confirmed"); err != nil {
+		t.Fatal(err)
+	}
+	task, _ = st.GetTask(ctx, task.ID)
+	if task.StageKey != domain.StageTestAcceptance || task.Status != domain.StatusNotReady || task.AgentReady {
+		t.Fatalf("after review task=%+v", task)
+	}
+	detail, err := st.GetAgentWorkDetail(ctx, task.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if task.StageKey != domain.StageCodeReview {
-		t.Fatalf("stage=%s", task.StageKey)
+	if len(detail.Runs) != 3 || len(detail.HumanReviews) != 2 {
+		t.Fatalf("detail=%+v", detail)
 	}
 }
 
-func TestRejectedCodeReviewMovesToTechnicalBreakdown(t *testing.T) {
+func TestClaimAndSubmitRequireSameAgentKey(t *testing.T) {
 	st := newTestStore(t)
 	ctx := context.Background()
 	p, _ := st.CreateProject(ctx, "demo", "", "u")
-	task, _ := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "dev", StageKey: domain.StageCodeReview, Status: domain.StatusAgenticReady}, "u")
-	if err := st.CreateReview(ctx, task.ID, domain.ReviewRejected, "changes needed", "reviewer"); err != nil {
+	task, _ := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "feature", Status: domain.StatusAgenticReady}, "u")
+	if err := st.ClaimTask(ctx, task.ID, "agent-1"); err != nil {
 		t.Fatal(err)
 	}
-	task, err := st.GetTask(ctx, task.ID)
+	if err := st.ClaimTask(ctx, task.ID, "agent-2"); err != store.ErrInvalidTransition {
+		t.Fatalf("second claim err=%v", err)
+	}
+	if err := st.SubmitBreakdown(ctx, task.ID, "agent-2", "wrong owner"); err != store.ErrAgentClaimMismatch {
+		t.Fatalf("submit err=%v", err)
+	}
+}
+
+func TestSubmitDevelopmentRejectsUnknownSHAAtomically(t *testing.T) {
+	st := newTestStore(t)
+	ctx := context.Background()
+	p, _ := st.CreateProject(ctx, "demo", "", "u")
+	task, _ := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "dev", StageKey: domain.StageTechnicalBreakdown, Status: domain.StatusAgenticReady}, "u")
+	if err := st.ClaimTask(ctx, task.ID, "agent-1"); err != nil {
+		t.Fatal(err)
+	}
+	err := st.SubmitDevelopment(ctx, task.ID, "agent-1", "done", []string{"missing"})
+	if !errors.Is(err, store.ErrCommitSHANotFound) {
+		t.Fatalf("err=%v", err)
+	}
+	var count int
+	if err := st.DB().QueryRow(`SELECT COUNT(1) FROM agent_runs WHERE task_id=?`, task.ID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("agent runs=%d", count)
+	}
+}
+
+func TestRejectBreakdownRequiresHumanReopen(t *testing.T) {
+	st := newTestStore(t)
+	ctx := context.Background()
+	p, _ := st.CreateProject(ctx, "demo", "", "u")
+	task, _ := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "feature", Status: domain.StatusAgenticReady}, "u")
+	if err := st.ClaimTask(ctx, task.ID, "agent-1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SubmitBreakdown(ctx, task.ID, "agent-1", "draft"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.ApproveTask(ctx, task.ID, "reviewer", domain.ReviewRejected, "redo"); err != nil {
+		t.Fatal(err)
+	}
+	task, _ = st.GetTask(ctx, task.ID)
+	if task.Status != domain.StatusNeedRedo || task.AgentReady {
+		t.Fatalf("task=%+v", task)
+	}
+	if err := st.MarkTaskAgentReady(ctx, task.ID, "reviewer", "retry"); err != nil {
+		t.Fatal(err)
+	}
+	tasks, err := st.ListAgentTasks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if task.StageKey != domain.StageTechnicalBreakdown {
-		t.Fatalf("stage=%s", task.StageKey)
+	if len(tasks) != 1 || len(tasks[0].HumanReviews) != 1 || tasks[0].HumanReviews[0].Note != "redo" {
+		t.Fatalf("tasks=%+v", tasks)
 	}
 }
 
-func TestTestFailureCreatesDefectTask(t *testing.T) {
+func TestTestFailureReturnsSameTaskToNeedRedo(t *testing.T) {
 	st := newTestStore(t)
 	ctx := context.Background()
 	p, _ := st.CreateProject(ctx, "demo", "", "u")
-	task, _ := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "feature", StageKey: domain.StageTestAcceptance, Status: domain.StatusAgenticReady}, "u")
+	task, _ := st.CreateTask(ctx, domain.Task{ProjectID: p.ID, Title: "feature", StageKey: domain.StageTestAcceptance, Status: domain.StatusNotReady}, "u")
 	defectID, err := st.CreateTestRecord(ctx, task.ID, domain.TestFailed, "bug", "tester")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if defectID == "" {
-		t.Fatal("expected defect task id")
-	}
-	defect, err := st.GetTask(ctx, defectID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if defect.ParentID != task.ID {
-		t.Fatalf("defect parent=%s want=%s", defect.ParentID, task.ID)
-	}
-	if defect.StageKey != domain.StageTechnicalBreakdown {
-		t.Fatalf("stage=%s", defect.StageKey)
+	if defectID != "" {
+		t.Fatalf("defect=%s", defectID)
 	}
 	task, err = st.GetTask(ctx, task.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if task.StageKey != domain.StageTechnicalBreakdown {
-		t.Fatalf("parent stage=%s", task.StageKey)
+	if task.StageKey != domain.StageTechnicalBreakdown || task.Status != domain.StatusNeedRedo || task.AgentReady {
+		t.Fatalf("task=%+v", task)
 	}
 }
 

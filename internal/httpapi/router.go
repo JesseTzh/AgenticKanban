@@ -56,9 +56,8 @@ func NewRouter(d Dependencies) http.Handler {
 	authn.GET("/tasks/:taskID", a.require("task", "read"), a.task)
 	authn.PUT("/tasks/:taskID", a.require("task", "update"), a.updateTask)
 	authn.DELETE("/tasks/:taskID", a.require("task", "delete"), a.deleteTask)
-	authn.POST("/tasks/:taskID/transitions", a.require("task", "update"), a.transitionTask)
-	authn.POST("/tasks/:taskID/lock", a.require("task", "update"), a.lockTask(true))
-	authn.POST("/tasks/:taskID/unlock", a.require("task", "update"), a.lockTask(false))
+	authn.POST("/tasks/:taskID/agent-ready", a.require("task", "update"), a.markTaskAgentReady)
+	authn.GET("/tasks/:taskID/agent-work", a.require("task", "read"), a.agentWorkDetail)
 	authn.POST("/tasks/:taskID/approvals", a.require("task", "update"), a.approveTask)
 	authn.GET("/projects/:projectID/repositories", a.require("repository", "read"), a.repositories)
 	authn.POST("/projects/:projectID/repositories", a.require("repository", "write"), a.createRepository)
@@ -67,7 +66,6 @@ func NewRouter(d Dependencies) http.Handler {
 	authn.GET("/projects/:projectID/commits", a.require("commit", "read"), a.commits)
 	authn.POST("/tasks/:taskID/commits", a.require("commit", "write"), a.linkCommit)
 	authn.DELETE("/tasks/:taskID/commits/:commitID", a.require("commit", "write"), a.unlinkCommit)
-	authn.POST("/tasks/:taskID/reviews", a.require("review", "write"), a.review)
 	authn.POST("/tasks/:taskID/tests", a.require("test", "write"), a.testRecord)
 	authn.POST("/tasks/:taskID/complete", a.require("task", "update"), a.completeTask)
 	authn.GET("/tasks/:taskID/refs", a.require("task", "read"), a.taskRefs)
@@ -79,7 +77,9 @@ func NewRouter(d Dependencies) http.Handler {
 	agent := r.Group("/api/agent", a.agentAuth())
 	agent.GET("/tasks", a.agentTasks)
 	agent.POST("/tasks/:taskID/claim", a.agentClaim)
-	agent.POST("/tasks/:taskID/submit", a.agentSubmit)
+	agent.POST("/tasks/:taskID/submit-breakdown", a.agentSubmitBreakdown)
+	agent.POST("/tasks/:taskID/submit-development", a.agentSubmitDevelopment)
+	agent.POST("/tasks/:taskID/submit-code-review", a.agentSubmitCodeReview)
 
 	webFiles := http.Dir(d.Config.WebDistPath)
 	webServer := http.FileServer(webFiles)
@@ -218,9 +218,17 @@ func bad(c *gin.Context, err error) {
 		code = 409
 		errorCode = "commit_required"
 	}
-	if errors.Is(err, store.ErrLocked) {
+	if errors.Is(err, store.ErrInvalidTransition) {
 		code = 409
-		errorCode = "locked"
+		errorCode = "invalid_transition"
+	}
+	if errors.Is(err, store.ErrAgentClaimMismatch) {
+		code = 409
+		errorCode = "agent_claim_mismatch"
+	}
+	if errors.Is(err, store.ErrCommitSHANotFound) {
+		code = 409
+		errorCode = "commit_sha_not_found"
 	}
 	failure(c, code, errorCode, err.Error())
 }
@@ -334,6 +342,9 @@ func (a *api) createTask(c *gin.Context) {
 		return
 	}
 	in.ProjectID = c.Param("projectID")
+	in.StageKey = domain.StageRequirementClarification
+	in.Status = domain.StatusNotReady
+	in.AgentReady = false
 	t, err := a.d.Store.CreateTask(reqctx(c), in, actor(c))
 	if err != nil {
 		bad(c, err)
@@ -369,26 +380,20 @@ func (a *api) deleteTask(c *gin.Context) {
 	}
 	success(c, 200, gin.H{"ok": true})
 }
-func (a *api) transitionTask(c *gin.Context) {
-	var in struct{ StageKey, Status, Reason string }
-	if err := c.ShouldBindJSON(&in); err != nil {
-		bad(c, err)
-		return
-	}
-	if err := a.d.Store.TransitionTask(reqctx(c), c.Param("taskID"), in.StageKey, in.Status, actor(c), in.Reason); err != nil {
+func (a *api) markTaskAgentReady(c *gin.Context) {
+	if err := a.d.Store.MarkTaskAgentReady(reqctx(c), c.Param("taskID"), actor(c), "human released to agent"); err != nil {
 		bad(c, err)
 		return
 	}
 	success(c, 200, gin.H{"ok": true})
 }
-func (a *api) lockTask(v bool) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if err := a.d.Store.LockTask(reqctx(c), c.Param("taskID"), v, actor(c)); err != nil {
-			bad(c, err)
-			return
-		}
-		success(c, 200, gin.H{"ok": true})
+func (a *api) agentWorkDetail(c *gin.Context) {
+	detail, err := a.d.Store.GetAgentWorkDetail(reqctx(c), c.Param("taskID"))
+	if err != nil {
+		bad(c, err)
+		return
 	}
+	success(c, 200, detail)
 }
 func (a *api) approveTask(c *gin.Context) {
 	var in struct{ Decision, Note string }
@@ -471,18 +476,6 @@ func (a *api) unlinkCommit(c *gin.Context) {
 	}
 	success(c, 200, gin.H{"ok": true})
 }
-func (a *api) review(c *gin.Context) {
-	var in struct{ Verdict, Note string }
-	if err := c.ShouldBindJSON(&in); err != nil {
-		bad(c, err)
-		return
-	}
-	if err := a.d.Store.CreateReview(reqctx(c), c.Param("taskID"), in.Verdict, in.Note, actor(c)); err != nil {
-		bad(c, err)
-		return
-	}
-	success(c, 200, gin.H{"ok": true})
-}
 func (a *api) testRecord(c *gin.Context) {
 	var in struct{ Verdict, Note string }
 	if err := c.ShouldBindJSON(&in); err != nil {
@@ -525,7 +518,8 @@ func (a *api) taskRef(c *gin.Context) {
 }
 
 func (a *api) agentTokens(c *gin.Context) {
-	xs, err := a.d.Store.ListAgentTokens(reqctx(c))
+	u := a.current(c)
+	xs, err := a.d.Store.ListAgentTokens(reqctx(c), u.ID, u.Role == domain.RoleAdmin)
 	if err != nil {
 		bad(c, err)
 		return
@@ -587,7 +581,7 @@ func (a *api) webhook(c *gin.Context) {
 	success(c, 200, gin.H{"ok": true, "commits": len(commits)})
 }
 func (a *api) agentTasks(c *gin.Context) {
-	xs, err := a.d.Store.ListAgentReadyTasks(reqctx(c))
+	xs, err := a.d.Store.ListAgentTasks(reqctx(c))
 	if err != nil {
 		bad(c, err)
 		return
@@ -601,16 +595,43 @@ func (a *api) agentClaim(c *gin.Context) {
 	}
 	success(c, 200, gin.H{"ok": true})
 }
-func (a *api) agentSubmit(c *gin.Context) {
+func (a *api) agentSubmitBreakdown(c *gin.Context) {
+	var in struct{ Result string }
+	if err := c.ShouldBindJSON(&in); err != nil {
+		bad(c, err)
+		return
+	}
+	if err := a.d.Store.SubmitBreakdown(reqctx(c), c.Param("taskID"), actor(c), in.Result); err != nil {
+		bad(c, err)
+		return
+	}
+	success(c, 200, gin.H{"ok": true})
+}
+func (a *api) agentSubmitDevelopment(c *gin.Context) {
 	var in struct {
-		Result    string
-		CommitIDs []string
+		Result     string
+		CommitSHAs []string
 	}
 	if err := c.ShouldBindJSON(&in); err != nil {
 		bad(c, err)
 		return
 	}
-	if err := a.d.Store.SubmitTask(reqctx(c), c.Param("taskID"), actor(c), in.Result, in.CommitIDs); err != nil {
+	if err := a.d.Store.SubmitDevelopment(reqctx(c), c.Param("taskID"), actor(c), in.Result, in.CommitSHAs); err != nil {
+		bad(c, err)
+		return
+	}
+	success(c, 200, gin.H{"ok": true})
+}
+func (a *api) agentSubmitCodeReview(c *gin.Context) {
+	var in struct {
+		Result string
+		Passed bool
+	}
+	if err := c.ShouldBindJSON(&in); err != nil {
+		bad(c, err)
+		return
+	}
+	if err := a.d.Store.SubmitCodeReview(reqctx(c), c.Param("taskID"), actor(c), in.Result, in.Passed); err != nil {
 		bad(c, err)
 		return
 	}
