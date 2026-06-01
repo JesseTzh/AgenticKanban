@@ -89,6 +89,14 @@ Code-review review:
 - To request another development pass, a human explicitly changes the task
   from `need_redo` to `agentic_ready`.
 
+Test-acceptance handling:
+
+- Test acceptance remains human-only.
+- A failed test returns the same task to `technical_breakdown/need_redo`.
+- Do not create a parallel technical-breakdown child task for the failure.
+- A human reviews the failure context and explicitly changes the task back to
+  `agentic_ready` when another development attempt should begin.
+
 ### Status Names
 
 Rename `pending_confirmation` to `pending_human_review`.
@@ -233,6 +241,31 @@ It returns the plaintext key once:
 `GET /api/agent-tokens` returns metadata only. Regular users receive their own
 keys. Administrators receive all keys, including owning-user metadata.
 
+### Browser Task-Workflow APIs
+
+```http
+POST /api/tasks/:taskID/agent-ready
+GET /api/tasks/:taskID/agent-work
+POST /api/tasks/:taskID/approvals
+```
+
+`POST /api/tasks/:taskID/agent-ready` is the explicit human action that opens a
+requirement-clarification or technical-breakdown task to Agents. The generic
+browser transition endpoint is removed so callers cannot bypass the workflow
+state machine.
+
+`GET /api/tasks/:taskID/agent-work` returns ordered Agent runs and human-review
+history for the browser task-detail dialog. Each Agent run includes its work
+type, result, optional code-review verdict, Agent-key name, and owning username.
+
+`POST /api/tasks/:taskID/approvals` records the final human judgment and note
+for a pending Agent submission.
+
+The legacy generic browser transition endpoint and direct code-review endpoint
+are removed. Browser-created tasks always start as
+`requirement_clarification/not_ready`; later Agent availability is controlled
+only by the explicit Agent-ready action and the workflow state machine.
+
 ### Agent Task APIs
 
 ```http
@@ -294,6 +327,14 @@ Remove:
 - Locked badge from task cards.
 - Locked row from the task-detail dialog.
 - Lock-related API assumptions and tests.
+
+### Human Review UI
+
+Update task details to display ordered Agent results and human-review history.
+Pending technical-breakdown and code-review submissions expose a human-review
+action. The review dialog requires a note and submits either an approved or
+rejected decision. Tasks that require a new Agent attempt expose an explicit
+`开放给 Agent` action instead of generic stage-move actions.
 
 ### Agent-Key Page
 
@@ -370,6 +411,11 @@ Frontend coverage must verify:
 
 - Task cards and task-detail dialogs no longer render lock state.
 - The sidebar renders the Agent-key navigation entry.
+- Task details render Agent results and human-review history.
+- Human reviewers can approve or reject pending Agent work with a required
+  note.
+- Eligible requirement-clarification and technical-breakdown tasks expose an
+  explicit action to become Agent-ready.
 - The Agent-key page lists metadata.
 - The create-key dialog renders the returned plaintext key exactly as a
   one-time result.
