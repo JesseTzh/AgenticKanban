@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { FolderKanban, GitBranch, LayoutDashboard, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { FolderKanban, GitBranch, KeyRound, LayoutDashboard, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
@@ -16,11 +16,12 @@ export function AdminShell({ children, title, projectID }: AdminShellProps) {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const items = [
-    { label: '项目列表', href: '/', icon: LayoutDashboard },
+    { label: '项目列表', href: '/', icon: LayoutDashboard, testID: 'projects' },
+    { label: 'Agent 密钥', href: '/agent-keys', icon: KeyRound, testID: 'agent-keys' },
     ...(projectID
       ? [
-          { label: '任务看板', href: `/projects/${projectID}`, icon: FolderKanban },
-          { label: '仓库与交付物', href: `/projects/${projectID}/repositories`, icon: GitBranch },
+          { label: '任务看板', href: `/projects/${projectID}`, icon: FolderKanban, testID: 'board' },
+          { label: '仓库与交付物', href: `/projects/${projectID}/repositories`, icon: GitBranch, testID: 'delivery' },
         ]
       : []),
   ]
@@ -34,13 +35,13 @@ export function AdminShell({ children, title, projectID }: AdminShellProps) {
             <span>Kanban</span>
           </div>
           <nav className="space-y-2 p-3" data-test-id="admin-navigation">
-            {items.map(({ label, href, icon: Icon }) => (
+            {items.map(({ label, href, icon: Icon, testID }) => (
               <Link
                 className={cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground',
                   location.pathname === href && 'bg-accent font-medium text-accent-foreground',
                 )}
-                data-test-id={`admin-navigation-${href === '/' ? 'projects' : href.endsWith('/repositories') ? 'delivery' : 'board'}`}
+                data-test-id={`admin-navigation-${testID}`}
                 key={href}
                 to={href}
               >

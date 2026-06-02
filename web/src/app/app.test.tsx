@@ -194,6 +194,7 @@ describe('admin application', () => {
     )
 
     expect(screen.getByRole('link', { name: '项目列表' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: 'Agent 密钥' })).toHaveAttribute('href', '/agent-keys')
     expect(screen.getByRole('link', { name: '任务看板' })).toHaveAttribute('href', '/projects/project-1')
     expect(screen.getByRole('link', { name: '仓库与交付物' })).toHaveAttribute('href', '/projects/project-1/repositories')
     expect(screen.getByTestId('admin-theme-toggle')).toBeInTheDocument()

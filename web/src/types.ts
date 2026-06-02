@@ -1,6 +1,11 @@
 export type User = { id:string; username:string; role:string }
 export type Project = { ID:string; Name:string; Description:string; CreatedAt:string; UpdatedAt:string }
 export type Stage = { Key:string; Name:string; Position:number }
-export type Task = { ID:string; ProjectID:string; ParentID:string; Title:string; Description:string; StageKey:string; Status:string; AgentReady:boolean; Locked:boolean; Completed:boolean; AgentID:string }
+export type Task = { ID:string; ProjectID:string; ParentID:string; Title:string; Description:string; StageKey:string; Status:string; AgentReady:boolean; Completed:boolean; AgentID:string }
 export type Repository = { ID:string; ProjectID:string; Name:string; GitURL:string; WebhookSecret:string; WebhookEnabled:boolean }
 export type Commit = { ID:string; ProjectID:string; RepositoryID:string; SHA:string; Message:string; Author:string; Branch:string; CommittedAt:string }
+export type HumanReview = { ID:string; TaskID:string; AgentRunID:string; Decision:string; Note:string; ReviewerID:string; CreatedAt:string }
+export type AgentRun = { ID:string; TaskID:string; AgentID:string; AgentKeyName:string; AgentOwnerUsername:string; WorkType:string; Status:string; Result:string; Passed:boolean | null; CreatedAt:string }
+export type AgentWorkDetail = { Runs:AgentRun[]; HumanReviews:HumanReview[] }
+export type AgentKey = { id:string; name:string; owner_id:string; owner_username:string; created_at:string }
+export type CreatedAgentKey = { id:string; name:string; token:string }

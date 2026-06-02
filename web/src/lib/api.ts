@@ -1,4 +1,4 @@
-import type { Commit, Project, Repository, Stage, Task } from '@/types'
+import type { AgentKey, AgentWorkDetail, Commit, CreatedAgentKey, Project, Repository, Stage, Task } from '@/types'
 
 type APIEnvelope<T> = {
   data: T | null
@@ -51,18 +51,21 @@ export const api = {
   tasks: (projectID: string) => request<Task[]>(`/api/projects/${projectID}/tasks`),
   createTask: (projectID: string, data: unknown) =>
     request(`/api/projects/${projectID}/tasks`, { method: 'POST', body: JSON.stringify(data) }),
-  transitionTask: (taskID: string, data: { StageKey: string; Status: string; Reason: string }) =>
-    request(`/api/tasks/${taskID}/transitions`, { method: 'POST', body: JSON.stringify(data) }),
+  markTaskAgentReady: (taskID: string) => request(`/api/tasks/${taskID}/agent-ready`, { method: 'POST' }),
+  agentWork: (taskID: string) => request<AgentWorkDetail>(`/api/tasks/${taskID}/agent-work`),
+  approveTask: (taskID: string, data: { Decision: string; Note: string }) =>
+    request(`/api/tasks/${taskID}/approvals`, { method: 'POST', body: JSON.stringify(data) }),
   repos: (projectID: string) => request<Repository[]>(`/api/projects/${projectID}/repositories`),
   createRepo: (projectID: string, data: unknown) =>
     request(`/api/projects/${projectID}/repositories`, { method: 'POST', body: JSON.stringify(data) }),
   commits: (projectID: string) => request<Commit[]>(`/api/projects/${projectID}/commits`),
-  review: (taskID: string, data: { Verdict: string; Note: string }) =>
-    request(`/api/tasks/${taskID}/reviews`, { method: 'POST', body: JSON.stringify(data) }),
   testRecord: (taskID: string, data: { Verdict: string; Note: string }) =>
     request(`/api/tasks/${taskID}/tests`, { method: 'POST', body: JSON.stringify(data) }),
   completeTask: (taskID: string) => request(`/api/tasks/${taskID}/complete`, { method: 'POST' }),
   taskRefs: (taskID: string) => request<Task[]>(`/api/tasks/${taskID}/refs`),
   addTaskRef: (taskID: string, ReferencedTaskID: string) =>
     request(`/api/tasks/${taskID}/refs`, { method: 'POST', body: JSON.stringify({ ReferencedTaskID }) }),
+  agentKeys: () => request<AgentKey[]>('/api/agent-tokens'),
+  createAgentKey: (Name: string) =>
+    request<CreatedAgentKey>('/api/agent-tokens', { method: 'POST', body: JSON.stringify({ Name }) }),
 }
