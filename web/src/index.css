@@ -111,9 +111,9 @@
   }
 
   .login-showcase-stage {
-    @apply absolute left-1/2 top-[58%] flex h-[25rem] w-64 flex-col overflow-hidden p-4;
-    margin-left: -8rem;
-    margin-top: -12.5rem;
+    @apply absolute left-1/2 top-[58%] flex h-[27rem] w-72 flex-col overflow-visible p-4;
+    margin-left: -9rem;
+    margin-top: -13.5rem;
     transition: all 1.5s cubic-bezier(0.25, 1, 0.5, 1);
   }
 
@@ -145,7 +145,7 @@
   }
 
   .login-showcase-stage-header {
-    @apply mb-4 flex items-center gap-3 border-b border-outline pb-4;
+    @apply mb-3 flex items-center gap-3 border-b border-outline pb-3;
   }
 
   .login-showcase-stage-icon {
@@ -160,13 +160,21 @@
     @apply mt-1 text-sm font-semibold text-foreground;
   }
 
+  .login-showcase-stage-meta {
+    @apply mb-3 grid gap-2 rounded-md border border-outline bg-surface-high/70 p-2 text-[10px] font-medium leading-4 text-muted-foreground;
+  }
+
+  .login-showcase-stage-gate {
+    @apply w-fit rounded-sm bg-primary/10 px-2 py-0.5 font-semibold text-primary;
+  }
+
   .login-showcase-task-list {
-    @apply flex flex-1 flex-col gap-3 overflow-hidden p-1;
+    @apply flex flex-1 flex-col gap-2 overflow-visible p-1;
   }
 
   .login-showcase-task {
-    @apply relative overflow-hidden rounded-md border border-outline bg-surface-high p-3;
-    transition: all 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+    @apply relative flex h-36 flex-col overflow-hidden rounded-md border border-outline bg-surface-high p-3;
+    transition: border-color 1.5s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 1.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 1.5s cubic-bezier(0.25, 1, 0.5, 1);
   }
 
   .login-showcase-task-active {
@@ -188,8 +196,20 @@
   }
 
   .login-showcase-task-moving {
+    @apply opacity-80;
+    transform: none;
+  }
+
+  .login-showcase-task-ghost {
     @apply opacity-0;
-    transform: translateX(280px);
+  }
+
+  .login-showcase-task-handoff {
+    @apply absolute z-30 w-64;
+    left: 50%;
+    top: calc(58% - 3.2rem);
+    margin-left: -8rem;
+    animation: login-showcase-handoff-flight 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
   }
 
   .login-showcase-task-row {
@@ -198,6 +218,17 @@
 
   .login-showcase-task-label {
     @apply truncate text-[10px] font-semibold text-muted-foreground;
+  }
+
+  .login-showcase-task-title {
+    @apply relative z-10 mt-1 h-4 truncate text-xs font-semibold leading-4 text-foreground;
+  }
+
+  .login-showcase-task-detail {
+    @apply relative z-10 mt-1 h-8 overflow-hidden text-[10px] leading-4 text-muted-foreground;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .login-showcase-task-icon {
@@ -211,7 +242,7 @@
   }
 
   .login-showcase-progress-row {
-    @apply relative z-10 mt-3 flex items-center gap-2;
+    @apply relative z-10 mt-3 flex h-4 shrink-0 items-center gap-2;
   }
 
   .login-showcase-progress {
@@ -224,12 +255,15 @@
     transition: width 1.5s ease-in-out;
   }
 
+  .login-showcase-progress-fill-handoff {
+    animation: login-showcase-handoff-progress 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  }
+
   .login-showcase-agent {
-    @apply hidden text-[8px] font-semibold tracking-[0.12em] text-primary;
+    @apply w-20 shrink-0 overflow-hidden whitespace-nowrap text-right text-[8px] font-semibold tracking-[0.12em] text-primary;
   }
 
   .login-showcase-task-scanning .login-showcase-agent {
-    @apply block;
     animation: login-showcase-agent-pulse 1.5s infinite;
   }
 
@@ -239,6 +273,14 @@
 
   .login-showcase-task-scanning .login-showcase-code-stream {
     @apply block;
+  }
+
+  .login-showcase-task-status {
+    @apply relative z-10 mt-2 inline-flex h-5 max-w-full shrink-0 items-center overflow-hidden whitespace-nowrap rounded-sm border border-outline px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground;
+  }
+
+  .login-showcase-placeholder {
+    @apply flex min-h-28 flex-1 items-center justify-center rounded-md border border-dashed border-outline bg-surface-high/30 px-3 text-center text-[10px] font-medium text-muted-foreground;
   }
 
   .login-showcase-accent-primary {
@@ -289,13 +331,36 @@
 
 @keyframes login-showcase-verify {
   0% { transform: scale(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--login-showcase-success) 70%, transparent); }
-  50% { transform: scale(1.05); box-shadow: 0 0 0 10px transparent; }
+  50% { transform: scale(1); box-shadow: 0 0 0 10px transparent; }
   100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
 }
 
 @keyframes login-showcase-pop-in {
   0% { opacity: 0; transform: scale(0); }
   100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes login-showcase-handoff-flight {
+  0% {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1.02);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--primary) 30%, transparent);
+  }
+  48% {
+    opacity: 1;
+    transform: translateX(16px) translateY(-6px) scale(0.995);
+    box-shadow: 0 0 28px color-mix(in srgb, var(--primary) 42%, transparent);
+  }
+  100% {
+    opacity: 0.96;
+    transform: translateX(0) translateY(0) scale(1);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+}
+
+@keyframes login-showcase-handoff-progress {
+  0% { width: var(--handoff-progress-start); }
+  100% { width: var(--handoff-progress-end); }
 }
 
 @media (prefers-reduced-motion: reduce) {
