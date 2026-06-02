@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"time"
@@ -30,6 +31,30 @@ func NewOpaqueToken() string {
 	b := make([]byte, 32)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+func NewRandomPassword() (string, error) {
+	b := make([]byte, 18)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+func EnsureInitialAdmin(ctx context.Context, st *store.Store, username, secret string) (password string, created bool, err error) {
+	count, err := st.CountUsers(ctx)
+	if err != nil {
+		return "", false, err
+	}
+	if count > 0 {
+		return "", false, nil
+	}
+	password, err = NewRandomPassword()
+	if err != nil {
+		return "", false, err
+	}
+	err = st.CreateUser(ctx, domain.User{ID: utils.NewID("usr"), Username: username, PasswordHash: HashPassword(password, secret), Role: domain.RoleAdmin})
+	return password, err == nil, err
 }
 
 func EnsureDefaultAdmin(ctx context.Context, st *store.Store, username, password, secret string) error {

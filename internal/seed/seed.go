@@ -43,7 +43,6 @@ func (in *inserter) insertFixtures(sessionSecret string) error {
 	for _, user := range []struct {
 		id, username, password, role string
 	}{
-		{"seed_usr_admin", "admin", "admin123", domain.RoleAdmin},
 		{"seed_usr_manager", "manager", "manager123", domain.RoleManager},
 		{"seed_usr_developer", "developer", "developer123", domain.RoleDeveloper},
 	} {

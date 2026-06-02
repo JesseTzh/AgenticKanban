@@ -34,6 +34,11 @@ func (s *Store) CreateUser(ctx context.Context, u domain.User) error {
 	_, err := s.db.ExecContext(ctx, `INSERT INTO users(id,username,password_hash,role) VALUES(?,?,?,?)`, u.ID, u.Username, u.PasswordHash, u.Role)
 	return err
 }
+func (s *Store) CountUsers(ctx context.Context) (int, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM users`).Scan(&count)
+	return count, err
+}
 func (s *Store) GetUserByUsername(ctx context.Context, username string) (domain.User, error) {
 	var u domain.User
 	err := s.db.QueryRowContext(ctx, `SELECT id,username,password_hash,role,created_at FROM users WHERE username=?`, username).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.Role, &u.CreatedAt)

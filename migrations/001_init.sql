@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   stage_key TEXT NOT NULL,
   status TEXT NOT NULL,
   agent_ready INTEGER NOT NULL DEFAULT 0,
-  locked INTEGER NOT NULL DEFAULT 0,
+  completed INTEGER NOT NULL DEFAULT 0,
   agent_id TEXT,
   created_by TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   deleted_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_tasks_project_stage ON tasks(project_id, stage_key, status);
-CREATE INDEX IF NOT EXISTS idx_tasks_agent_ready ON tasks(agent_ready, locked, status);
+CREATE INDEX IF NOT EXISTS idx_tasks_agent_ready ON tasks(agent_ready, status);
 CREATE TABLE IF NOT EXISTS task_histories (
   id TEXT PRIMARY KEY,
   task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
@@ -68,11 +68,14 @@ CREATE TABLE IF NOT EXISTS agent_runs (
   agent_id TEXT NOT NULL,
   status TEXT NOT NULL,
   result TEXT NOT NULL DEFAULT '',
+  work_type TEXT NOT NULL DEFAULT '',
+  passed INTEGER,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS approvals (
   id TEXT PRIMARY KEY,
   task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  agent_run_id TEXT REFERENCES agent_runs(id) ON DELETE SET NULL,
   decision TEXT NOT NULL,
   note TEXT NOT NULL DEFAULT '',
   approver_id TEXT NOT NULL,
@@ -145,21 +148,12 @@ CREATE TABLE IF NOT EXISTS test_records (
   tester_id TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TABLE IF NOT EXISTS archives (
-  id TEXT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS task_refs (
   task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  version INTEGER NOT NULL,
-  content TEXT NOT NULL,
+  referenced_task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   created_by TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(task_id, version)
-);
-CREATE TABLE IF NOT EXISTS task_archive_refs (
-  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  archive_id TEXT NOT NULL REFERENCES archives(id) ON DELETE CASCADE,
-  created_by TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY(task_id, archive_id)
+  PRIMARY KEY(task_id, referenced_task_id)
 );
 CREATE TABLE IF NOT EXISTS audit_logs (
   id TEXT PRIMARY KEY,

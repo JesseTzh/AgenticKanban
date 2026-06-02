@@ -163,7 +163,7 @@ describe('admin application', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '登录' }))
 
-    await waitFor(() => expect(api.login).toHaveBeenCalledWith('admin', 'admin123', false))
+    await waitFor(() => expect(api.login).toHaveBeenCalledWith('admin', '', false))
   })
 
   it('submits a persistent login when remember login is checked', async () => {
@@ -179,7 +179,7 @@ describe('admin application', () => {
     fireEvent.click(screen.getByLabelText('记住登录状态'))
     fireEvent.click(screen.getByRole('button', { name: '登录' }))
 
-    await waitFor(() => expect(api.login).toHaveBeenCalledWith('admin', 'admin123', true))
+    await waitFor(() => expect(api.login).toHaveBeenCalledWith('admin', '', true))
   })
 
   it('renders project navigation in the authenticated shell', () => {

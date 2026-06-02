@@ -47,9 +47,13 @@ func main() {
 	}
 
 	st := store.New(database, logger)
-	if err := auth.EnsureDefaultAdmin(context.Background(), st, "admin", "admin123", cfg.SessionSecret); err != nil {
-		logger.Error("ensure default admin failed", slog.Any("err", err))
+	adminPassword, adminCreated, err := auth.EnsureInitialAdmin(context.Background(), st, "admin", cfg.SessionSecret)
+	if err != nil {
+		logger.Error("ensure initial admin failed", slog.Any("err", err))
 		os.Exit(1)
+	}
+	if adminCreated {
+		logger.Info("initial admin password generated", slog.String("username", "admin"), slog.String("password", adminPassword))
 	}
 
 	c, err := cache.New()

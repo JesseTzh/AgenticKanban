@@ -12,7 +12,7 @@ import { LoginWorkflowShowcase } from './login-workflow-showcase'
 export function LoginPage() {
   const navigate = useNavigate()
   const [username, setUsername] = useState('admin')
-  const [password, setPassword] = useState('admin123')
+  const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
