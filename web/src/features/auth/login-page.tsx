@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { api } from '@/lib/api'
 import { isDemoMode } from '@/lib/runtime'
+import { demoProjects } from '@/lib/demo-data'
 import { ThemeToggle } from '@/theme'
 import { LoginWorkflowShowcase } from './login-workflow-showcase'
 
@@ -23,7 +24,7 @@ export function LoginPage() {
     setError('')
     try {
       await api.login(username, password, remember)
-      navigate('/')
+      navigate(isDemoMode ? `/projects/${demoProjects[0].ID}` : '/')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '登录失败')
     } finally {
