@@ -76,6 +76,19 @@ describe('admin application', () => {
     expect(screen.getByTestId('login-workflow-stage-breakdown')).toBeInTheDocument()
     expect(screen.getByTestId('login-workflow-stage-review')).toBeInTheDocument()
     expect(screen.getByTestId('login-workflow-stage-qa')).toBeInTheDocument()
+    expect(screen.queryByTestId('login-workflow-stage-meta-review')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('login-workflow-stage-owner-review')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('login-workflow-stage-gate-review')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('login-workflow-stage-agent-requirements')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('login-workflow-stage-human-qa')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('login-workflow-task-status-requirements-AK-802')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('login-workflow-stage-purpose-requirements')).not.toBeInTheDocument()
+    expect(screen.getByTestId('login-workflow-showcase')).not.toHaveTextContent('等待需求负责人确认')
+    expect(screen.getAllByTestId(/^login-workflow-background-task-requirements-AK-/)).toHaveLength(4)
+    expect(screen.getByTestId('login-workflow-background-task-requirements-AK-795')).toHaveTextContent('权限角色补充说明')
+    expect(screen.getByTestId('login-workflow-drop-slot-requirements')).toHaveClass('login-showcase-drop-slot-open')
+    expect(screen.queryByTestId('login-workflow-task-detail-requirements-AK-802')).not.toBeInTheDocument()
+    expect(screen.getByTestId('login-workflow-showcase')).not.toHaveTextContent(/HANDOFF|进度条/)
   })
 
   it('keeps the workflow showcase mounted when the login theme changes', () => {
@@ -130,10 +143,10 @@ describe('admin application', () => {
     vi.advanceTimersByTime(10_000)
 
     expect(screen.getByTestId('login-workflow-showcase')).toHaveAttribute('data-reduced-motion', 'true')
-    expect(screen.getByTestId('login-workflow-task-requirements-AK-802')).not.toHaveClass('login-showcase-task-scanning')
+    expect(screen.getByTestId('login-workflow-task-requirements-AK-802')).not.toHaveClass('login-showcase-task-executing')
   })
 
-  it('advances the active showcase task through scan, verify, and transfer phases', () => {
+  it('advances from agent execution through human confirmation and transfer', () => {
     vi.useFakeTimers()
     render(
       <ThemeProvider>
@@ -145,20 +158,49 @@ describe('admin application', () => {
 
     const task = screen.getByTestId('login-workflow-task-requirements-AK-802')
     const progress = screen.getByTestId('login-workflow-progress-fill-requirements-AK-802')
-    act(() => vi.advanceTimersByTime(1200))
-    expect(task).toHaveClass('login-showcase-task-scanning')
-    act(() => vi.advanceTimersByTime(300))
-    act(() => vi.advanceTimersByTime(2000))
-    expect(task).toHaveClass('login-showcase-task-verifying')
-    act(() => vi.advanceTimersByTime(1000))
-    expect(task).toHaveClass('login-showcase-task-moving')
-    expect(progress).toHaveClass('login-showcase-progress-paused')
+    expect(task).toHaveClass('login-showcase-task-executing')
+    expect(task).not.toHaveClass('login-showcase-task-compact')
+    expect(screen.getByTestId('login-workflow-agent-status-requirements')).toBeInTheDocument()
+    expect(screen.getByTestId('login-workflow-substep-requirements')).toHaveTextContent('正在提取目标、边界与验收条件')
+
     act(() => vi.advanceTimersByTime(1500))
+    act(() => vi.advanceTimersByTime(2200))
+
+    expect(task).toHaveClass('login-showcase-task-awaiting')
+    expect(screen.getByTestId('login-workflow-human-status-requirements')).toBeInTheDocument()
+    expect(screen.getByTestId('login-workflow-substep-requirements')).toHaveTextContent('等待人工确认：确认需求')
+    expect(screen.getByTestId('login-workflow-confirm-pointer-requirements')).toHaveClass('lucide-mouse-pointer-2')
+    expect(screen.getByTestId('login-workflow-confirm-button-label-requirements')).toHaveTextContent('确认需求')
+
+    act(() => vi.advanceTimersByTime(1400))
+
+    expect(task).toHaveClass('login-showcase-task-confirming')
+    expect(screen.getByTestId('login-workflow-confirm-pointer-requirements')).toHaveClass('lucide-pointer')
+    expect(screen.getByTestId('login-workflow-confirm-button-label-requirements')).toHaveTextContent('已确认')
+
+    act(() => vi.advanceTimersByTime(800))
+
+    expect(task).toHaveClass('login-showcase-task-moving')
+    expect(task).toHaveClass('login-showcase-task-compact')
+    expect(screen.getByTestId('login-workflow-task-compact-status-requirements-AK-802')).toHaveTextContent('流转中')
+    expect(screen.getByTestId('login-workflow-drop-slot-requirements')).not.toHaveClass('login-showcase-drop-slot-open')
+    expect(screen.getByTestId('login-workflow-drop-slot-breakdown')).toHaveClass('login-showcase-drop-slot-compact')
+    expect(progress).toHaveClass('login-showcase-progress-paused')
+    expect(screen.getByTestId('login-workflow-moving-status-requirements')).toBeInTheDocument()
+    expect(screen.getByTestId('login-workflow-substep-requirements')).toHaveTextContent('正在进入下一步')
+
+    act(() => vi.advanceTimersByTime(1400))
+
     expect(screen.getByTestId('login-workflow-stage-breakdown')).toHaveClass('login-showcase-stage-active')
     expect(screen.getByTestId('login-workflow-task-breakdown-AK-802')).toBe(task)
-    expect(screen.getByTestId('login-workflow-progress-fill-breakdown-AK-802')).toBe(progress)
-    expect(progress).toHaveClass('login-showcase-progress-stage-1')
-    expect(progress).not.toHaveClass('login-showcase-progress-paused')
+    expect(task).not.toHaveClass('login-showcase-task-compact')
+    expect(screen.getByTestId('login-workflow-drop-slot-breakdown')).toHaveClass('login-showcase-drop-slot-open')
+    const nextProgress = screen.getByTestId('login-workflow-progress-fill-breakdown-AK-802')
+    expect(nextProgress).not.toBe(progress)
+    expect(nextProgress.style.getPropertyValue('--login-showcase-progress-start')).toBe('0.25')
+    expect(nextProgress.style.getPropertyValue('--login-showcase-progress-end')).toBe('0.5')
+    expect(nextProgress.style.getPropertyValue('--login-showcase-progress-duration')).toBe('3000ms')
+    expect(nextProgress).not.toHaveClass('login-showcase-progress-paused')
   })
 
   it('uses a shuffle transition before restarting the workflow', () => {
@@ -172,18 +214,29 @@ describe('admin application', () => {
     )
 
     act(() => vi.advanceTimersByTime(1500))
-    for (let stage = 0; stage < 3; stage += 1) {
-      act(() => vi.advanceTimersByTime(2_000))
-      act(() => vi.advanceTimersByTime(1_000))
-      act(() => vi.advanceTimersByTime(1_500))
-    }
-    act(() => vi.advanceTimersByTime(2_000))
-    act(() => vi.advanceTimersByTime(1_000))
+
+    act(() => vi.advanceTimersByTime(2200))
+    act(() => vi.advanceTimersByTime(1400))
+    act(() => vi.advanceTimersByTime(800))
+    act(() => vi.advanceTimersByTime(1400))
+
+    act(() => vi.advanceTimersByTime(2200))
+    act(() => vi.advanceTimersByTime(800))
+    act(() => vi.advanceTimersByTime(1400))
+
+    act(() => vi.advanceTimersByTime(2200))
+    act(() => vi.advanceTimersByTime(1400))
+    act(() => vi.advanceTimersByTime(800))
+    act(() => vi.advanceTimersByTime(1400))
+
+    act(() => vi.advanceTimersByTime(2200))
+    act(() => vi.advanceTimersByTime(1400))
+    act(() => vi.advanceTimersByTime(800))
 
     expect(screen.getByTestId('login-workflow-carousel')).toHaveClass('login-showcase-carousel-restarting')
     expect(screen.getByTestId('login-workflow-progress-fill-qa-AK-802')).toHaveClass('login-showcase-progress-paused')
 
-    act(() => vi.advanceTimersByTime(1500))
+    act(() => vi.advanceTimersByTime(1400))
 
     expect(screen.getByTestId('login-workflow-stage-requirements')).toHaveClass('login-showcase-stage-active')
     expect(screen.getByTestId('login-workflow-carousel')).not.toHaveClass('login-showcase-carousel-restarting')
