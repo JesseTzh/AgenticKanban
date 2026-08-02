@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { LockKeyhole, UserRound } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { api } from '@/lib/api'
-import { isDemoMode } from '@/lib/runtime'
+import { appVersion, isDemoMode } from '@/lib/runtime'
 import { demoProjects } from '@/lib/demo-data'
 import { ThemeToggle } from '@/theme'
+import { LoginHealthIndicator } from './login-health-indicator'
 import { LoginWorkflowShowcase } from './login-workflow-showcase'
 
 export function LoginPage() {
@@ -34,12 +36,20 @@ export function LoginPage() {
 
   return (
     <main className="grid min-h-screen bg-background lg:grid-cols-[minmax(0,3fr)_minmax(28rem,2fr)]" data-testid="login-page">
-      <div className="hidden lg:block" data-testid="login-empty-region">
+      <div className="relative hidden lg:block" data-testid="login-empty-region">
         <LoginWorkflowShowcase />
+        <div className="absolute bottom-6 left-6 z-20" data-testid="login-version-region">
+          <Badge className="login-version-tag" data-testid="login-version-tag" title={`版本 ${appVersion}`} variant="outline">
+            ver. {appVersion}
+          </Badge>
+        </div>
       </div>
       <section className="relative flex min-h-screen items-center justify-center bg-surface-low/90 p-8 backdrop-blur-[20px] lg:px-12 xl:px-16" data-testid="login-form-region">
         <div className="absolute right-6 top-6" data-testid="login-theme-actions">
           <ThemeToggle dataTestId="login-theme-toggle" />
+        </div>
+        <div className="absolute bottom-6 right-6 z-20" data-testid="login-health-region">
+          <LoginHealthIndicator />
         </div>
         <div className="w-full max-w-md" data-testid="login-panel-content">
           <header className="mb-12" data-testid="login-header">

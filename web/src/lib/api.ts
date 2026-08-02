@@ -57,6 +57,7 @@ export async function request<T>(path: string, init: RequestInit = {}, location:
 }
 
 export const api = {
+  health: () => request<{ ok: boolean }>('/api/health'),
   login: (username: string, password: string, remember = false) =>
     request('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password, remember }) }),
   logout: () => request('/api/auth/logout', { method: 'POST' }),

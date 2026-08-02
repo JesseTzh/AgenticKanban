@@ -44,6 +44,25 @@ describe('admin application', () => {
     expect(screen.getByTestId('login-theme-toggle')).toBeInTheDocument()
   })
 
+  it('renders the build version and reports backend health', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { ok: true }, error: null }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200,
+    })))
+
+    render(
+      <ThemeProvider>
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    expect(screen.getByTestId('login-version-tag')).toHaveTextContent(/^ver\. \d{6}-[0-9a-f]{7}$/)
+    await waitFor(() => expect(screen.getByTestId('login-health-indicator')).toHaveClass('login-health-indicator-healthy'))
+    expect(screen.getByTestId('login-health-indicator')).toHaveAttribute('title', '后端服务运行正常')
+  })
+
   it('renders all workflow showcase stages on desktop', () => {
     render(
       <ThemeProvider>

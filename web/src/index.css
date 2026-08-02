@@ -71,6 +71,32 @@
     @apply block h-full w-1/2 animate-pulse bg-primary content-[''];
   }
 
+  .login-version-tag {
+    @apply h-6 border-outline bg-surface-low/80 px-2 font-mono text-[9px] font-semibold tracking-[0.12em] text-muted-foreground shadow-none backdrop-blur-[12px];
+  }
+
+  .login-health-indicator {
+    @apply inline-flex h-7 items-center gap-2 rounded-sm border border-outline bg-surface-low/80 px-2.5 font-mono text-[9px] font-semibold tracking-[0.12em] text-muted-foreground backdrop-blur-[12px];
+  }
+
+  .login-health-light {
+    @apply size-2 shrink-0 rounded-full bg-muted-foreground;
+  }
+
+  .login-health-indicator-checking .login-health-light {
+    background-color: var(--login-showcase-warning);
+    animation: login-health-breathe 1.6s ease-in-out infinite;
+  }
+
+  .login-health-indicator-healthy .login-health-light {
+    background-color: var(--login-showcase-success);
+    animation: login-health-breathe 2.2s ease-in-out infinite;
+  }
+
+  .login-health-indicator-unhealthy .login-health-light {
+    background-color: var(--destructive);
+  }
+
   .login-showcase {
     @apply relative min-h-screen overflow-hidden bg-background;
   }
@@ -368,6 +394,17 @@
   50% { box-shadow: 0 0 16px color-mix(in srgb, var(--primary) 54%, transparent); }
 }
 
+@keyframes login-health-breathe {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent);
+    opacity: 0.75;
+  }
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, currentColor 20%, transparent);
+    opacity: 1;
+  }
+}
+
 @keyframes login-showcase-agent-pulse {
   0%, 100% { opacity: 0.65; text-shadow: 0 0 2px color-mix(in srgb, var(--primary) 45%, transparent); }
   50% { opacity: 1; text-shadow: 0 0 10px color-mix(in srgb, var(--primary) 90%, transparent); }
@@ -480,5 +517,9 @@
   .login-showcase-static *::after {
     animation: none !important;
     transition: none !important;
+  }
+
+  .login-health-light {
+    animation: none !important;
   }
 }

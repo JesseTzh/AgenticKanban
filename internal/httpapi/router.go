@@ -39,7 +39,7 @@ func NewRouter(d Dependencies) http.Handler {
 	r := gin.New()
 	r.Use(gin.Recovery(), requestLogger(d.Logger))
 	a := &api{d: d}
-	r.GET("/api/health", func(c *gin.Context) { success(c, 200, gin.H{"ok": true}) })
+	r.GET("/api/health", a.health)
 	r.POST("/api/auth/login", a.login)
 
 	authn := r.Group("/api", a.session())
@@ -125,6 +125,17 @@ func abortFailure(c *gin.Context, code int, errorCode, message string) {
 }
 
 func notFound(c *gin.Context) { failure(c, 404, "not_found", "not found") }
+
+func (a *api) health(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(reqctx(c), time.Second)
+	defer cancel()
+	if err := a.d.Store.DB().PingContext(ctx); err != nil {
+		a.d.Logger.Error("health check failed", slog.Any("err", err))
+		failure(c, http.StatusServiceUnavailable, "service_unavailable", "backend is not healthy")
+		return
+	}
+	success(c, http.StatusOK, gin.H{"ok": true})
+}
 
 func requestLogger(log *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {

@@ -192,6 +192,16 @@ func TestAPIEnvelopes(t *testing.T) {
 	}
 }
 
+func TestHealthReportsDatabaseFailure(t *testing.T) {
+	r, st := newRouterAndStore(t, t.TempDir())
+	if err := st.DB().Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	rr, _ := doJSON(t, r, http.MethodGet, "/api/health", nil, nil)
+	assertErrorEnvelope(t, rr, http.StatusServiceUnavailable, "service_unavailable", "backend is not healthy")
+}
+
 func TestAPIAuthenticationErrorEnvelopes(t *testing.T) {
 	r := newRouter(t)
 
