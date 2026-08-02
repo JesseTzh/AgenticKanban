@@ -10,7 +10,8 @@ export function App() {
   return (
     <Routes>
       <Route element={<LoginPage />} path="/login" />
-      <Route element={isDemoMode ? <LoginPage /> : <ProjectsPage />} path="/" />
+      <Route element={<LoginPage />} path="/" />
+      <Route element={isDemoMode ? <LoginPage /> : <ProjectsPage />} path="/projects" />
       <Route element={<AgentKeysPage />} path="/agent-keys" />
       <Route element={<BoardPage />} path="/projects/:projectID" />
       <Route element={<DeliveryPage />} path="/projects/:projectID/repositories" />

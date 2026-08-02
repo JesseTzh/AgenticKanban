@@ -1,8 +1,9 @@
 import '@testing-library/jest-dom/vitest'
 import { act, configure, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminShell } from '@/components/layout/admin-shell'
+import { App } from '@/app/app'
 import { LoginPage } from '@/features/auth/login-page'
 import { api } from '@/lib/api'
 import { ThemeProvider } from '@/theme'
@@ -19,6 +20,7 @@ describe('admin application', () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     })))
+    vi.spyOn(api, 'me').mockRejectedValue(new Error('unauthorized'))
   })
 
   afterEach(() => {
@@ -42,6 +44,35 @@ describe('admin application', () => {
     expect(screen.getByTestId('login-empty-region')).toBeInTheDocument()
     expect(screen.getByTestId('login-workflow-showcase')).toBeInTheDocument()
     expect(screen.getByTestId('login-theme-toggle')).toBeInTheDocument()
+  })
+
+  it('checks the current session and redirects when it is valid', async () => {
+    vi.spyOn(api, 'me').mockResolvedValue({ user: { id: 'user-1', username: 'admin', role: 'admin' } })
+
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/login']}>
+          <Routes>
+            <Route element={<LoginPage />} path="/login" />
+            <Route element={<div data-testid="authenticated-projects-page" />} path="/projects" />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    await waitFor(() => expect(screen.getByTestId('authenticated-projects-page')).toBeInTheDocument())
+  })
+
+  it('uses login as the default route', () => {
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/']}>
+          <App />
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    expect(screen.getByTestId('login-page')).toBeInTheDocument()
   })
 
   it('renders the build version and reports backend health', async () => {
@@ -320,7 +351,7 @@ describe('admin application', () => {
       </ThemeProvider>,
     )
 
-    expect(screen.getByRole('link', { name: '项目列表' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: '项目列表' })).toHaveAttribute('href', '/projects')
     expect(screen.getByRole('link', { name: 'Agent 密钥' })).toHaveAttribute('href', '/agent-keys')
     expect(screen.getByRole('link', { name: '任务看板' })).toHaveAttribute('href', '/projects/project-1')
     expect(screen.getByRole('link', { name: '仓库与交付物' })).toHaveAttribute('href', '/projects/project-1/repositories')

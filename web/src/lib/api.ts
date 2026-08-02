@@ -1,4 +1,4 @@
-import type { AgentKey, AgentWorkDetail, Commit, CreatedAgentKey, Project, Repository, Stage, Task } from '@/types'
+import type { AgentKey, AgentWorkDetail, Commit, CreatedAgentKey, Project, Repository, Stage, Task, User } from '@/types'
 import { demoAgentKeys, demoAgentWork, demoCommits, demoProjects, demoRepositories, demoStages, demoTasks } from '@/lib/demo-data'
 import { appPath, isDemoMode } from '@/lib/runtime'
 
@@ -58,6 +58,7 @@ export async function request<T>(path: string, init: RequestInit = {}, location:
 
 export const api = {
   health: () => request<{ ok: boolean }>('/api/health'),
+  me: () => request<{ user: User }>('/api/me'),
   login: (username: string, password: string, remember = false) =>
     request('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password, remember }) }),
   logout: () => request('/api/auth/logout', { method: 'POST' }),

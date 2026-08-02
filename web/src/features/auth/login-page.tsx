@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { LockKeyhole, UserRound } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -21,12 +21,29 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
 
+  useEffect(() => {
+    if (isDemoMode) return
+
+    let active = true
+    void api.me()
+      .then(() => {
+        if (active) navigate('/projects', { replace: true })
+      })
+      .catch(() => {
+        // An absent or expired session leaves the user on the login page.
+      })
+
+    return () => {
+      active = false
+    }
+  }, [navigate])
+
   async function login() {
     setPending(true)
     setError('')
     try {
       await api.login(username, password, remember)
-      navigate(isDemoMode ? `/projects/${demoProjects[0].ID}` : '/')
+      navigate(isDemoMode ? `/projects/${demoProjects[0].ID}` : '/projects')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '登录失败')
     } finally {

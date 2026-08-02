@@ -18,7 +18,7 @@ export function AdminShell({ children, title, projectID }: AdminShellProps) {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const items = [
-    { label: '项目列表', href: '/', icon: LayoutDashboard, testID: 'projects' },
+    { label: '项目列表', href: '/projects', icon: LayoutDashboard, testID: 'projects' },
     { label: 'Agent 密钥', href: '/agent-keys', icon: KeyRound, testID: 'agent-keys' },
     ...(projectID
       ? [
