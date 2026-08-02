@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from 'react'
 import { FolderKanban, GitBranch, KeyRound, LayoutDashboard, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/theme'
+import { isDemoMode } from '@/lib/runtime'
 
 type AdminShellProps = {
   children: ReactNode
@@ -14,6 +15,7 @@ type AdminShellProps = {
 
 export function AdminShell({ children, title, projectID }: AdminShellProps) {
   const location = useLocation()
+  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const items = [
     { label: '项目列表', href: '/', icon: LayoutDashboard, testID: 'projects' },
@@ -71,12 +73,12 @@ export function AdminShell({ children, title, projectID }: AdminShellProps) {
             <ThemeToggle dataTestId="admin-theme-toggle" />
             <Button
               data-test-id="admin-logout"
-              onClick={() => api.logout().finally(() => (window.location.href = '/login'))}
+              onClick={() => api.logout().finally(() => navigate('/login'))}
               size="sm"
               variant="outline"
             >
               <LogOut className="size-4" />
-              退出
+              {isDemoMode ? '返回登录' : '退出'}
             </Button>
           </div>
         </header>

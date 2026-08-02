@@ -114,34 +114,40 @@
     @apply absolute left-1/2 top-[58%] flex h-[27rem] w-72 flex-col overflow-visible p-4;
     margin-left: -9rem;
     margin-top: -13.5rem;
-    transition: all 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+    backface-visibility: hidden;
+    transition:
+      transform 1.5s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 1.5s linear,
+      border-color 1.5s linear,
+      box-shadow 1.5s linear;
+    will-change: transform, opacity;
   }
 
   .login-showcase-stage-active {
     @apply z-10 opacity-100;
     border-color: color-mix(in srgb, var(--primary) 55%, transparent);
     box-shadow: 0 0 32px color-mix(in srgb, var(--primary) 18%, transparent);
-    transform: translateZ(0) scale(1.08);
+    transform: translateZ(0);
   }
 
   .login-showcase-stage-next-1 {
     @apply z-[9] opacity-60;
-    transform: translateX(220px) translateZ(-100px) scale(0.9);
+    transform: translateX(220px) translateZ(-100px);
   }
 
   .login-showcase-stage-next-2 {
     @apply z-[8] opacity-25;
-    transform: translateX(390px) translateZ(-200px) scale(0.74);
+    transform: translateX(390px) translateZ(-200px);
   }
 
   .login-showcase-stage-prev-1 {
     @apply z-[9] opacity-60;
-    transform: translateX(-220px) translateZ(-100px) scale(0.9);
+    transform: translateX(-220px) translateZ(-100px);
   }
 
   .login-showcase-stage-prev-2 {
     @apply z-[8] opacity-25;
-    transform: translateX(-390px) translateZ(-200px) scale(0.74);
+    transform: translateX(-390px) translateZ(-200px);
   }
 
   .login-showcase-stage-header {
@@ -183,33 +189,68 @@
     animation: login-showcase-border-pulse 2s infinite;
   }
 
-  .login-showcase-task-scanning::after {
-    @apply absolute inset-y-0 w-1/2 content-[''];
-    left: -100%;
-    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary) 40%, transparent), transparent);
-    animation: login-showcase-scan 1s infinite;
-  }
-
   .login-showcase-task-verifying {
     border-color: var(--login-showcase-success);
     animation: login-showcase-verify 0.5s ease-out forwards;
   }
 
-  .login-showcase-task-moving {
-    @apply opacity-80;
-    transform: none;
-  }
-
-  .login-showcase-task-ghost {
-    @apply opacity-0;
-  }
-
-  .login-showcase-task-handoff {
+  .login-showcase-task-floating {
     @apply absolute z-30 w-64;
     left: 50%;
     top: calc(58% - 3.2rem);
     margin-left: -8rem;
-    animation: login-showcase-handoff-flight 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    backface-visibility: hidden;
+    will-change: transform;
+  }
+
+  .login-showcase-task-handoff {
+    animation:
+      login-showcase-border-pulse 2s infinite,
+      login-showcase-handoff-flight 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .login-showcase-task-restart {
+    animation:
+      login-showcase-border-pulse 2s infinite,
+      login-showcase-task-shuffle 1.5s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  .login-showcase-task-intro {
+    animation:
+      login-showcase-border-pulse 2s infinite,
+      login-showcase-task-intro 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .login-showcase-carousel-restarting .login-showcase-stage-active {
+    animation: login-showcase-shuffle-active 1.5s cubic-bezier(0.65, 0, 0.35, 1) both;
+  }
+
+  .login-showcase-carousel-restarting .login-showcase-stage-next-1 {
+    animation: login-showcase-shuffle-next-1 1.5s cubic-bezier(0.65, 0, 0.35, 1) both;
+  }
+
+  .login-showcase-carousel-restarting .login-showcase-stage-next-2 {
+    animation: login-showcase-shuffle-next-2 1.5s cubic-bezier(0.65, 0, 0.35, 1) both;
+  }
+
+  .login-showcase-carousel-restarting .login-showcase-stage-prev-1 {
+    animation: login-showcase-shuffle-prev-1 1.5s cubic-bezier(0.65, 0, 0.35, 1) both;
+  }
+
+  .login-showcase-carousel-intro .login-showcase-stage-active {
+    animation: login-showcase-intro-active 1.5s cubic-bezier(0.65, 0, 0.35, 1) both;
+  }
+
+  .login-showcase-carousel-intro .login-showcase-stage-next-1 {
+    animation: login-showcase-intro-next-1 1.5s cubic-bezier(0.65, 0, 0.35, 1) both;
+  }
+
+  .login-showcase-carousel-intro .login-showcase-stage-next-2 {
+    animation: login-showcase-intro-next-2 1.5s cubic-bezier(0.65, 0, 0.35, 1) both;
+  }
+
+  .login-showcase-carousel-intro .login-showcase-stage-prev-1 {
+    animation: login-showcase-intro-prev-1 1.5s cubic-bezier(0.65, 0, 0.35, 1) both;
   }
 
   .login-showcase-task-row {
@@ -233,7 +274,6 @@
 
   .login-showcase-task-icon {
     @apply size-3.5 shrink-0;
-    animation: login-showcase-spin 3s linear infinite;
   }
 
   .login-showcase-task-verifying .login-showcase-task-icon {
@@ -250,13 +290,30 @@
   }
 
   .login-showcase-progress-fill {
-    @apply h-full;
+    @apply h-full w-full;
     background-color: currentColor;
-    transition: width 1.5s ease-in-out;
+    transform-origin: left center;
+    will-change: transform;
   }
 
-  .login-showcase-progress-fill-handoff {
-    animation: login-showcase-handoff-progress 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  .login-showcase-progress-stage-0 {
+    animation: login-showcase-progress-stage-0 3s linear both;
+  }
+
+  .login-showcase-progress-stage-1 {
+    animation: login-showcase-progress-stage-1 3s linear both;
+  }
+
+  .login-showcase-progress-stage-2 {
+    animation: login-showcase-progress-stage-2 3s linear both;
+  }
+
+  .login-showcase-progress-stage-3 {
+    animation: login-showcase-progress-stage-3 3s linear both;
+  }
+
+  .login-showcase-progress-paused {
+    animation-play-state: paused;
   }
 
   .login-showcase-agent {
@@ -277,10 +334,6 @@
 
   .login-showcase-task-status {
     @apply relative z-10 mt-2 inline-flex h-5 max-w-full shrink-0 items-center overflow-hidden whitespace-nowrap rounded-sm border border-outline px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground;
-  }
-
-  .login-showcase-placeholder {
-    @apply flex min-h-28 flex-1 items-center justify-center rounded-md border border-dashed border-outline bg-surface-high/30 px-3 text-center text-[10px] font-medium text-muted-foreground;
   }
 
   .login-showcase-accent-primary {
@@ -315,15 +368,6 @@
   50% { box-shadow: 0 0 16px color-mix(in srgb, var(--primary) 54%, transparent); }
 }
 
-@keyframes login-showcase-scan {
-  0% { left: -100%; }
-  100% { left: 200%; }
-}
-
-@keyframes login-showcase-spin {
-  100% { transform: rotate(360deg); }
-}
-
 @keyframes login-showcase-agent-pulse {
   0%, 100% { opacity: 0.65; text-shadow: 0 0 2px color-mix(in srgb, var(--primary) 45%, transparent); }
   50% { opacity: 1; text-shadow: 0 0 10px color-mix(in srgb, var(--primary) 90%, transparent); }
@@ -342,25 +386,93 @@
 
 @keyframes login-showcase-handoff-flight {
   0% {
-    opacity: 1;
-    transform: translateX(0) translateY(0) scale(1.02);
+    transform: translate3d(0, 0, 0) scale(1);
     box-shadow: 0 0 18px color-mix(in srgb, var(--primary) 30%, transparent);
   }
-  48% {
-    opacity: 1;
-    transform: translateX(16px) translateY(-6px) scale(0.995);
+  45% {
+    transform: translate3d(0, -8px, 24px) scale(1.01);
     box-shadow: 0 0 28px color-mix(in srgb, var(--primary) 42%, transparent);
   }
   100% {
-    opacity: 0.96;
-    transform: translateX(0) translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
     box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 22%, transparent);
   }
 }
 
-@keyframes login-showcase-handoff-progress {
-  0% { width: var(--handoff-progress-start); }
-  100% { width: var(--handoff-progress-end); }
+@keyframes login-showcase-task-shuffle {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0); }
+  28% { transform: translate3d(72px, -10px, 36px) rotate(2deg); }
+  55% { transform: translate3d(-54px, -6px, 48px) rotate(-2deg); }
+  78% { transform: translate3d(20px, -2px, 18px) rotate(0.5deg); }
+}
+
+@keyframes login-showcase-task-intro {
+  0% { transform: translate3d(0, 0, -80px) scale(0.94); opacity: 0; }
+  100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+}
+
+@keyframes login-showcase-shuffle-active {
+  0% { transform: translateZ(0); opacity: 1; }
+  45% { transform: translateX(16px) translateZ(38px) rotate(1deg); opacity: 0.9; }
+  100% { transform: translateX(-220px) translateZ(-100px); opacity: 0.6; }
+}
+
+@keyframes login-showcase-shuffle-next-1 {
+  0% { transform: translateX(220px) translateZ(-100px); opacity: 0.6; }
+  45% { transform: translateX(-16px) translateZ(26px) rotate(-1deg); opacity: 0.92; }
+  100% { transform: translateZ(0); opacity: 1; }
+}
+
+@keyframes login-showcase-shuffle-next-2 {
+  0% { transform: translateX(390px) translateZ(-200px); opacity: 0.25; }
+  45% { transform: translateX(12px) translateZ(-18px); opacity: 0.72; }
+  100% { transform: translateX(220px) translateZ(-100px); opacity: 0.6; }
+}
+
+@keyframes login-showcase-shuffle-prev-1 {
+  0% { transform: translateX(-220px) translateZ(-100px); opacity: 0.6; }
+  45% { transform: translateX(-12px) translateZ(-26px); opacity: 0.72; }
+  100% { transform: translateX(390px) translateZ(-200px); opacity: 0.25; }
+}
+
+@keyframes login-showcase-intro-active {
+  0% { transform: translateX(0) translateZ(-120px) scale(0.92); opacity: 0.35; }
+  100% { transform: translateZ(0); opacity: 1; }
+}
+
+@keyframes login-showcase-intro-next-1 {
+  0% { transform: translateX(0) translateZ(-140px) scale(0.9); opacity: 0.25; }
+  100% { transform: translateX(220px) translateZ(-100px); opacity: 0.6; }
+}
+
+@keyframes login-showcase-intro-next-2 {
+  0% { transform: translateX(0) translateZ(-160px) scale(0.88); opacity: 0.15; }
+  100% { transform: translateX(390px) translateZ(-200px); opacity: 0.25; }
+}
+
+@keyframes login-showcase-intro-prev-1 {
+  0% { transform: translateX(0) translateZ(-140px) scale(0.9); opacity: 0.25; }
+  100% { transform: translateX(-220px) translateZ(-100px); opacity: 0.6; }
+}
+
+@keyframes login-showcase-progress-stage-0 {
+  0% { transform: scaleX(0); }
+  100% { transform: scaleX(0.25); }
+}
+
+@keyframes login-showcase-progress-stage-1 {
+  0% { transform: scaleX(0.25); }
+  100% { transform: scaleX(0.5); }
+}
+
+@keyframes login-showcase-progress-stage-2 {
+  0% { transform: scaleX(0.5); }
+  100% { transform: scaleX(0.75); }
+}
+
+@keyframes login-showcase-progress-stage-3 {
+  0% { transform: scaleX(0.75); }
+  100% { transform: scaleX(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {

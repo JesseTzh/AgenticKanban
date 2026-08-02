@@ -125,15 +125,70 @@ describe('admin application', () => {
     )
 
     const task = screen.getByTestId('login-workflow-task-requirements-AK-802')
+    const progress = screen.getByTestId('login-workflow-progress-fill-requirements-AK-802')
     act(() => vi.advanceTimersByTime(1200))
     expect(task).toHaveClass('login-showcase-task-scanning')
+    act(() => vi.advanceTimersByTime(300))
     act(() => vi.advanceTimersByTime(2000))
     expect(task).toHaveClass('login-showcase-task-verifying')
     act(() => vi.advanceTimersByTime(1000))
     expect(task).toHaveClass('login-showcase-task-moving')
+    expect(progress).toHaveClass('login-showcase-progress-paused')
     act(() => vi.advanceTimersByTime(1500))
     expect(screen.getByTestId('login-workflow-stage-breakdown')).toHaveClass('login-showcase-stage-active')
-    expect(screen.getByTestId('login-workflow-task-breakdown-AK-802')).toBeInTheDocument()
+    expect(screen.getByTestId('login-workflow-task-breakdown-AK-802')).toBe(task)
+    expect(screen.getByTestId('login-workflow-progress-fill-breakdown-AK-802')).toBe(progress)
+    expect(progress).toHaveClass('login-showcase-progress-stage-1')
+    expect(progress).not.toHaveClass('login-showcase-progress-paused')
+  })
+
+  it('uses a shuffle transition before restarting the workflow', () => {
+    vi.useFakeTimers()
+    render(
+      <ThemeProvider>
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    act(() => vi.advanceTimersByTime(1500))
+    for (let stage = 0; stage < 3; stage += 1) {
+      act(() => vi.advanceTimersByTime(2_000))
+      act(() => vi.advanceTimersByTime(1_000))
+      act(() => vi.advanceTimersByTime(1_500))
+    }
+    act(() => vi.advanceTimersByTime(2_000))
+    act(() => vi.advanceTimersByTime(1_000))
+
+    expect(screen.getByTestId('login-workflow-carousel')).toHaveClass('login-showcase-carousel-restarting')
+    expect(screen.getByTestId('login-workflow-progress-fill-qa-AK-802')).toHaveClass('login-showcase-progress-paused')
+
+    act(() => vi.advanceTimersByTime(1500))
+
+    expect(screen.getByTestId('login-workflow-stage-requirements')).toHaveClass('login-showcase-stage-active')
+    expect(screen.getByTestId('login-workflow-carousel')).not.toHaveClass('login-showcase-carousel-restarting')
+  })
+
+  it('uses the shuffle animation when the workflow first appears', () => {
+    vi.useFakeTimers()
+    render(
+      <ThemeProvider>
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    expect(screen.getByTestId('login-workflow-carousel')).toHaveClass('login-showcase-carousel-intro')
+    expect(screen.getByTestId('login-workflow-task-requirements-AK-802')).toHaveClass('login-showcase-task-intro')
+    expect(screen.getByTestId('login-workflow-task-requirements-AK-802')).not.toHaveClass('login-showcase-task-restart')
+    expect(screen.getByTestId('login-workflow-progress-fill-requirements-AK-802')).toHaveClass('login-showcase-progress-paused')
+
+    act(() => vi.advanceTimersByTime(1500))
+
+    expect(screen.getByTestId('login-workflow-carousel')).not.toHaveClass('login-showcase-carousel-intro')
+    expect(screen.getByTestId('login-workflow-progress-fill-requirements-AK-802')).not.toHaveClass('login-showcase-progress-paused')
   })
 
   it('renders the precision progress line while login is pending', () => {

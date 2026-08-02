@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentType, type CSSProperties, type SVGProps } from 'react'
+import { useEffect, useState, type ComponentType, type SVGProps } from 'react'
 import { BadgeCheck, BrainCircuit, CheckCircle2, Cpu, GitBranch, RefreshCw, ScanSearch, UserCheck } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -93,13 +93,6 @@ const phaseCopy: Record<StageMode, Record<AnimationPhase, string>> = {
   },
 }
 
-const progressByPhase: Record<AnimationPhase, number> = {
-  idle: 0.1,
-  scanning: 0.38,
-  verifying: 0.7,
-  moving: 0.95,
-}
-
 function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches)
 
@@ -123,23 +116,28 @@ export function LoginWorkflowShowcase() {
   const isDesktop = useMediaQuery(desktopQuery)
   const reduceMotion = useMediaQuery(reducedMotionQuery)
   const [activeIndex, setActiveIndex] = useState(0)
-  const [phase, setPhase] = useState<AnimationPhase>('idle')
+  const [phase, setPhase] = useState<AnimationPhase>('scanning')
   const [handoff, setHandoff] = useState<Handoff>(null)
+  const [isIntro, setIsIntro] = useState(true)
 
   useEffect(() => {
-    if (!isDesktop || reduceMotion) return
+    if (!isDesktop || reduceMotion || !isIntro) return
+
+    const timeout = window.setTimeout(() => setIsIntro(false), 1500)
+    return () => window.clearTimeout(timeout)
+  }, [isDesktop, isIntro, reduceMotion])
+
+  useEffect(() => {
+    if (!isDesktop || reduceMotion || isIntro) return
 
     const timeout = window.setTimeout(() => {
       if (handoff) {
+        if (handoff.to === 0) setActiveIndex(0)
         setHandoff(null)
-        setPhase('idle')
-        return
-      }
-
-      if (phase === 'idle') {
         setPhase('scanning')
         return
       }
+
       if (phase === 'scanning') {
         setPhase('verifying')
         return
@@ -147,16 +145,26 @@ export function LoginWorkflowShowcase() {
       if (phase === 'verifying') {
         const nextIndex = (activeIndex + 1) % stages.length
         setHandoff({ from: activeIndex, to: nextIndex })
-        setActiveIndex(nextIndex)
+        if (nextIndex !== 0) setActiveIndex(nextIndex)
         setPhase('moving')
         return
       }
-    }, handoff ? 1500 : phase === 'idle' ? 1200 : phase === 'scanning' ? 2000 : phase === 'verifying' ? 1000 : 1500)
+    }, handoff ? 1500 : phase === 'scanning' ? 2000 : phase === 'verifying' ? 1000 : 1500)
 
     return () => window.clearTimeout(timeout)
-  }, [activeIndex, handoff, isDesktop, phase, reduceMotion])
+  }, [activeIndex, handoff, isDesktop, isIntro, phase, reduceMotion])
 
   if (!isDesktop) return null
+
+  const taskStageIndex = handoff?.from ?? activeIndex
+  const taskStage = stages[taskStageIndex]
+  const taskPhase = reduceMotion ? 'idle' : phase
+  const isCycleRestart = handoff?.to === 0
+  const TaskIcon = taskPhase === 'verifying'
+    ? CheckCircle2
+    : taskPhase === 'scanning'
+      ? (taskStage.mode === 'human' ? UserCheck : Cpu)
+      : RefreshCw
 
   return (
     <section
@@ -172,37 +180,51 @@ export function LoginWorkflowShowcase() {
         <h2 className="login-showcase-heading" data-test-id="login-workflow-heading">一个需求的完整交付生命线</h2>
         <p className="login-showcase-description" data-test-id="login-workflow-description">从人工澄清到 Agent 拆解、提交审核、人工测试，同一张需求卡持续流转并保留每个关口状态。</p>
       </div>
-      <div className="login-showcase-carousel" data-test-id="login-workflow-carousel">
-        {handoff ? (
-          <div
-            className="login-showcase-task login-showcase-task-active login-showcase-task-handoff"
-            data-test-id={`login-workflow-task-handoff-${demand.id}`}
-          >
-            <div className="login-showcase-task-row" data-test-id={`login-workflow-task-row-handoff-${demand.id}`}>
-              <span className="login-showcase-task-label" data-test-id={`login-workflow-task-label-handoff-${demand.id}`}>{demand.id}</span>
-              <RefreshCw className={cn('login-showcase-task-icon', stages[handoff.to].accent)} data-test-id={`login-workflow-task-icon-handoff-${demand.id}`} />
-            </div>
-            <p className="login-showcase-task-title" data-test-id={`login-workflow-task-title-handoff-${demand.id}`}>{demand.title}</p>
-            <p className="login-showcase-task-detail" data-test-id={`login-workflow-task-detail-handoff-${demand.id}`}>{stages[handoff.to].detail}</p>
-            <div className="login-showcase-progress-row" data-test-id={`login-workflow-progress-row-handoff-${demand.id}`}>
-              <div className="login-showcase-progress" data-test-id={`login-workflow-progress-handoff-${demand.id}`}>
-                <div
-                  className={cn('login-showcase-progress-fill login-showcase-progress-fill-handoff', stages[handoff.to].accent)}
-                  data-test-id={`login-workflow-progress-fill-handoff-${demand.id}`}
-                  style={{ '--handoff-progress-start': '100%', '--handoff-progress-end': `${progressByPhase.idle * 100}%` } as CSSProperties}
-                />
-              </div>
-              <span className="login-showcase-agent" data-test-id={`login-workflow-agent-handoff-${demand.id}`}>HANDOFF</span>
-            </div>
-            <span className="login-showcase-task-status" data-test-id={`login-workflow-task-status-handoff-${demand.id}`}>{stages[handoff.to].gate}</span>
+      <div
+        className={cn(
+          'login-showcase-carousel',
+          isIntro && !reduceMotion && 'login-showcase-carousel-intro',
+          isCycleRestart && 'login-showcase-carousel-restarting',
+        )}
+        data-test-id="login-workflow-carousel"
+      >
+        <div
+          className={cn(
+            'login-showcase-task',
+            'login-showcase-task-active',
+            'login-showcase-task-floating',
+            handoff && 'login-showcase-task-handoff',
+            isIntro && !reduceMotion && 'login-showcase-task-intro',
+            isCycleRestart && 'login-showcase-task-restart',
+            `login-showcase-task-${taskPhase}`,
+          )}
+          data-test-id={`login-workflow-task-${taskStage.id}-${demand.id}`}
+        >
+          <div className="login-showcase-task-row" data-test-id={`login-workflow-task-row-${taskStage.id}-${demand.id}`}>
+            <span className="login-showcase-task-label" data-test-id={`login-workflow-task-label-${taskStage.id}-${demand.id}`}>{demand.id}</span>
+            <TaskIcon className={cn('login-showcase-task-icon', taskStage.accent)} data-test-id={`login-workflow-task-icon-${taskStage.id}-${demand.id}`} />
           </div>
-        ) : null}
+          <p className="login-showcase-task-title" data-test-id={`login-workflow-task-title-${taskStage.id}-${demand.id}`}>{demand.title}</p>
+          <p className="login-showcase-task-detail" data-test-id={`login-workflow-task-detail-${taskStage.id}-${demand.id}`}>{taskStage.detail}</p>
+          <div className="login-showcase-progress-row" data-test-id={`login-workflow-progress-row-${taskStage.id}-${demand.id}`}>
+            <div className="login-showcase-progress" data-test-id={`login-workflow-progress-${taskStage.id}-${demand.id}`}>
+              <div
+                className={cn(
+                  'login-showcase-progress-fill',
+                  `login-showcase-progress-stage-${taskStageIndex}`,
+                  (handoff || isIntro) && 'login-showcase-progress-paused',
+                  taskStage.accent,
+                )}
+                data-test-id={`login-workflow-progress-fill-${taskStage.id}-${demand.id}`}
+              />
+            </div>
+            <span className="login-showcase-agent" data-test-id={`login-workflow-agent-${taskStage.id}-${demand.id}`}>{phaseCopy[taskStage.mode][taskPhase]}</span>
+          </div>
+          <span className="login-showcase-task-status" data-test-id={`login-workflow-task-status-${taskStage.id}-${demand.id}`}>{taskStage.gate}</span>
+          <span className="login-showcase-code-stream" data-test-id={`login-workflow-code-${taskStage.id}-${demand.id}`}>{taskStage.mode === 'human' ? 'manual confirmation' : 'commit sha verified'}</span>
+        </div>
         {stages.map((stage, stageIndex) => {
           const StageIcon = stage.icon
-          const isActive = stageIndex === activeIndex && !handoff
-          const isHandoffSource = handoff?.from === stageIndex
-          const taskPhase = isHandoffSource ? 'moving' : isActive ? phase : 'idle'
-          const TaskIcon = taskPhase === 'verifying' ? CheckCircle2 : taskPhase === 'scanning' ? (stage.mode === 'human' ? UserCheck : Cpu) : RefreshCw
           return (
             <Card
               className={cn('login-showcase-stage', stageStateClass(stageIndex, activeIndex))}
@@ -220,37 +242,7 @@ export function LoginWorkflowShowcase() {
                 <span data-test-id={`login-workflow-stage-owner-${stage.id}`}>{stage.owner}</span>
                 <span className="login-showcase-stage-gate" data-test-id={`login-workflow-stage-gate-${stage.id}`}>{stage.gate}</span>
               </div>
-              <div className="login-showcase-task-list" data-test-id={`login-workflow-task-list-${stage.id}`}>
-                {isActive || isHandoffSource ? (
-                  <div
-                    className={cn('login-showcase-task', 'login-showcase-task-active', isHandoffSource && 'login-showcase-task-ghost', `login-showcase-task-${taskPhase}`)}
-                    data-test-id={`login-workflow-task-${stage.id}-${demand.id}`}
-                  >
-                    <div className="login-showcase-task-row" data-test-id={`login-workflow-task-row-${stage.id}-${demand.id}`}>
-                      <span className="login-showcase-task-label" data-test-id={`login-workflow-task-label-${stage.id}-${demand.id}`}>{demand.id}</span>
-                      <TaskIcon className={cn('login-showcase-task-icon', stage.accent)} data-test-id={`login-workflow-task-icon-${stage.id}-${demand.id}`} />
-                    </div>
-                    <p className="login-showcase-task-title" data-test-id={`login-workflow-task-title-${stage.id}-${demand.id}`}>{demand.title}</p>
-                    <p className="login-showcase-task-detail" data-test-id={`login-workflow-task-detail-${stage.id}-${demand.id}`}>{stage.detail}</p>
-                    <div className="login-showcase-progress-row" data-test-id={`login-workflow-progress-row-${stage.id}-${demand.id}`}>
-                      <div className="login-showcase-progress" data-test-id={`login-workflow-progress-${stage.id}-${demand.id}`}>
-                        <div
-                          className={cn('login-showcase-progress-fill', stage.accent)}
-                          data-test-id={`login-workflow-progress-fill-${stage.id}-${demand.id}`}
-                          style={{ width: `${progressByPhase[taskPhase] * 100}%` }}
-                        />
-                      </div>
-                      <span className="login-showcase-agent" data-test-id={`login-workflow-agent-${stage.id}-${demand.id}`}>{phaseCopy[stage.mode][taskPhase]}</span>
-                    </div>
-                    <span className="login-showcase-task-status" data-test-id={`login-workflow-task-status-${stage.id}-${demand.id}`}>{stage.gate}</span>
-                    <span className="login-showcase-code-stream" data-test-id={`login-workflow-code-${stage.id}-${demand.id}`}>{stage.mode === 'human' ? 'manual confirmation' : 'commit sha verified'}</span>
-                  </div>
-                ) : (
-                  <div className="login-showcase-placeholder" data-test-id={`login-workflow-placeholder-${stage.id}`}>
-                    <span data-test-id={`login-workflow-placeholder-text-${stage.id}`}>等待需求流入</span>
-                  </div>
-                )}
-              </div>
+              <div className="login-showcase-task-list" data-test-id={`login-workflow-task-list-${stage.id}`} />
             </Card>
           )
         })}

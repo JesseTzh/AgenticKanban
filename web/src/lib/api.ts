@@ -1,4 +1,6 @@
 import type { AgentKey, AgentWorkDetail, Commit, CreatedAgentKey, Project, Repository, Stage, Task } from '@/types'
+import { demoAgentKeys, demoAgentWork, demoCommits, demoProjects, demoRepositories, demoStages, demoTasks } from '@/lib/demo-data'
+import { appPath, isDemoMode } from '@/lib/runtime'
 
 type APIEnvelope<T> = {
   data: T | null
@@ -11,12 +13,26 @@ type LocationLike = {
 }
 
 export function redirectToLogin(location: LocationLike = window.location) {
-  if (location.pathname !== '/login') {
-    location.href = '/login'
+  const loginPath = appPath('/login')
+  if (location.pathname !== loginPath) {
+    location.href = loginPath
   }
 }
 
+function demoResponse<T>(path: string): T {
+  if (path === '/api/projects') return demoProjects as T
+  if (/^\/api\/projects\/[^/]+\/board$/.test(path)) return demoStages as T
+  if (/^\/api\/projects\/[^/]+\/tasks$/.test(path)) return demoTasks as T
+  if (/^\/api\/projects\/[^/]+\/repositories$/.test(path)) return demoRepositories as T
+  if (/^\/api\/projects\/[^/]+\/commits$/.test(path)) return demoCommits as T
+  if (/^\/api\/tasks\/[^/]+\/refs$/.test(path)) return demoTasks.slice(0, 1) as T
+  if (/^\/api\/tasks\/[^/]+\/agent-work$/.test(path)) return demoAgentWork as T
+  if (path === '/api/agent-tokens') return demoAgentKeys as T
+  return {} as T
+}
+
 export async function request<T>(path: string, init: RequestInit = {}, location: LocationLike = window.location): Promise<T> {
+  if (isDemoMode) return demoResponse<T>(path)
   const response = await fetch(path, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...(init.headers || {}) },

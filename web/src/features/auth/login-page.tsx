@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { api } from '@/lib/api'
+import { isDemoMode } from '@/lib/runtime'
 import { ThemeToggle } from '@/theme'
 import { LoginWorkflowShowcase } from './login-workflow-showcase'
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const [username, setUsername] = useState('admin')
+  const [username, setUsername] = useState(isDemoMode ? 'demo' : 'admin')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)
   const [error, setError] = useState('')
@@ -46,7 +47,7 @@ export function LoginPage() {
               <span className="text-[10px] font-black tracking-[0.3em] text-primary uppercase" data-test-id="login-eyebrow-text">AGENTIC DELIVERY CONTROL</span>
             </div>
             <h1 className="text-3xl font-bold tracking-[-0.04em] text-foreground" data-test-id="login-title">Agentic Kanban</h1>
-            <p className="mt-2 text-sm text-muted-foreground" data-test-id="login-description">登录后管理 Agentic Coding 工作流</p>
+            <p className="mt-2 text-sm text-muted-foreground" data-test-id="login-description">{isDemoMode ? '演示模式：任意用户名和密码均可进入系统。' : '登录后管理 Agentic Coding 工作流'}</p>
           </header>
           <form
             className="space-y-6"

@@ -93,6 +93,12 @@ cp configs/config.example.env .env
 docker compose up --build
 ```
 
+## GitHub Pages 演示站
+
+推送到 `main` 会触发 `.github/workflows/deploy-pages.yml`，将前端构建并部署到 GitHub Pages。请先在仓库的 **Settings > Pages** 中选择 **GitHub Actions** 作为部署来源。
+
+Pages 构建自动开启 demo 模式：登录页接受任意用户名和密码，并展示内置的项目、任务、仓库与 Agent 执行记录。该模式只用于静态演示站，所有写操作都不会请求后端或持久化数据。
+
 ## 测试
 
 ```bash
