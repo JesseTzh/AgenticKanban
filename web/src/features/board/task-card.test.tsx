@@ -6,7 +6,7 @@ import { api } from '@/lib/api'
 import type { Task } from '@/types'
 import { TaskCard } from './task-card'
 
-configure({ testIdAttribute: 'data-test-id' })
+configure({ testIdAttribute: 'data-testid' })
 
 const task: Task = {
   ID: 'task-1',

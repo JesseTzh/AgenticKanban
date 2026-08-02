@@ -7,7 +7,7 @@ import { LoginPage } from '@/features/auth/login-page'
 import { api } from '@/lib/api'
 import { ThemeProvider } from '@/theme'
 
-configure({ testIdAttribute: 'data-test-id' })
+configure({ testIdAttribute: 'data-testid' })
 
 describe('admin application', () => {
   beforeEach(() => {

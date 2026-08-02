@@ -31,27 +31,27 @@ export function TaskCard({ projectID, task }: { projectID: string; task: Task })
       <Card
         aria-label={`查看任务详情：${task.Title}`}
         className="flex cursor-pointer flex-col gap-2 py-3 transition-[background-color,box-shadow] hover:bg-surface-bright hover:shadow-button-hover"
-        data-test-id={`task-card-${task.ID}`}
+        data-testid={`task-card-${task.ID}`}
         onClick={() => setDetailsOpen(true)}
         onKeyDown={openDetailsFromKeyboard}
         role="button"
         tabIndex={0}
       >
-        <CardHeader className="px-4 py-0" data-test-id={`task-card-header-${task.ID}`}>
-          <div data-test-id={`task-card-title-row-${task.ID}`}>
-            <CardTitle className="text-sm" data-test-id={`task-card-title-${task.ID}`}>{task.Title}</CardTitle>
+        <CardHeader className="px-4 py-0" data-testid={`task-card-header-${task.ID}`}>
+          <div data-testid={`task-card-title-row-${task.ID}`}>
+            <CardTitle className="text-sm" data-testid={`task-card-title-${task.ID}`}>{task.Title}</CardTitle>
           </div>
         </CardHeader>
-        <CardFooter className="justify-between px-4 pb-0" data-test-id={`task-card-footer-${task.ID}`}>
-          <div className="flex flex-wrap gap-2" data-test-id={`task-card-badges-${task.ID}`}><Badge data-test-id={`task-status-${task.ID}`} variant="secondary">{task.Status}</Badge>{task.Completed ? <Badge data-test-id={`task-completed-${task.ID}`} variant="secondary">已完成</Badge> : null}</div>
+        <CardFooter className="justify-between px-4 pb-0" data-testid={`task-card-footer-${task.ID}`}>
+          <div className="flex flex-wrap gap-2" data-testid={`task-card-badges-${task.ID}`}><Badge data-testid={`task-status-${task.ID}`} variant="secondary">{task.Status}</Badge>{task.Completed ? <Badge data-testid={`task-completed-${task.ID}`} variant="secondary">已完成</Badge> : null}</div>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild><Button aria-label="任务操作" data-test-id={`task-actions-${task.ID}`} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()} size="icon" variant="ghost"><Ellipsis className="size-4" /></Button></DropdownMenuTrigger>
-            <DropdownMenuContent align="end" data-test-id={`task-menu-${task.ID}`}>
-              <DropdownMenuLabel data-test-id={`task-menu-label-${task.ID}`}>任务操作</DropdownMenuLabel>
-              {canReleaseToAgent ? <DropdownMenuItem data-test-id={`task-agent-ready-${task.ID}`} onSelect={() => mutation.mutate(() => api.markTaskAgentReady(task.ID))}>开放给 Agent</DropdownMenuItem> : null}
-              {canHumanReview ? <DropdownMenuItem data-test-id={`task-human-review-${task.ID}`} onSelect={() => setReviewOpen(true)}>人工审核</DropdownMenuItem> : null}
-              {task.StageKey === 'test_acceptance' && !task.Completed ? <DropdownMenuItem data-test-id={`task-test-failed-${task.ID}`} onSelect={() => mutation.mutate(() => api.testRecord(task.ID, { Verdict: 'failed', Note: '测试失败' }))}>测试失败</DropdownMenuItem> : null}
-              {task.StageKey === 'test_acceptance' && !task.Completed ? <DropdownMenuItem data-test-id={`task-complete-${task.ID}`} onSelect={() => mutation.mutate(() => api.completeTask(task.ID))}>确认完成</DropdownMenuItem> : null}
+            <DropdownMenuTrigger asChild><Button aria-label="任务操作" data-testid={`task-actions-${task.ID}`} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()} size="icon" variant="ghost"><Ellipsis className="size-4" /></Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end" data-testid={`task-menu-${task.ID}`}>
+              <DropdownMenuLabel data-testid={`task-menu-label-${task.ID}`}>任务操作</DropdownMenuLabel>
+              {canReleaseToAgent ? <DropdownMenuItem data-testid={`task-agent-ready-${task.ID}`} onSelect={() => mutation.mutate(() => api.markTaskAgentReady(task.ID))}>开放给 Agent</DropdownMenuItem> : null}
+              {canHumanReview ? <DropdownMenuItem data-testid={`task-human-review-${task.ID}`} onSelect={() => setReviewOpen(true)}>人工审核</DropdownMenuItem> : null}
+              {task.StageKey === 'test_acceptance' && !task.Completed ? <DropdownMenuItem data-testid={`task-test-failed-${task.ID}`} onSelect={() => mutation.mutate(() => api.testRecord(task.ID, { Verdict: 'failed', Note: '测试失败' }))}>测试失败</DropdownMenuItem> : null}
+              {task.StageKey === 'test_acceptance' && !task.Completed ? <DropdownMenuItem data-testid={`task-complete-${task.ID}`} onSelect={() => mutation.mutate(() => api.completeTask(task.ID))}>确认完成</DropdownMenuItem> : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </CardFooter>

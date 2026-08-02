@@ -29,21 +29,21 @@ export function AdminShell({ children, title, projectID }: AdminShellProps) {
   ]
 
   return (
-    <div className={cn('min-h-screen bg-background md:grid', sidebarOpen && 'md:grid-cols-[max-content_minmax(0,1fr)]')} data-test-id="admin-shell">
+    <div className={cn('min-h-screen bg-background md:grid', sidebarOpen && 'md:grid-cols-[max-content_minmax(0,1fr)]')} data-testid="admin-shell">
       {sidebarOpen && (
-        <aside className="sticky top-0 hidden h-screen bg-surface-low shadow-card outline outline-1 outline-outline md:block" data-test-id="admin-sidebar">
-          <div className="flex h-16 items-center gap-1 px-6 text-lg font-semibold tracking-tight" data-test-id="admin-brand">
+        <aside className="sticky top-0 hidden h-screen bg-surface-low shadow-card outline outline-1 outline-outline md:block" data-testid="admin-sidebar">
+          <div className="flex h-16 items-center gap-1 px-6 text-lg font-semibold tracking-tight" data-testid="admin-brand">
             <span className="text-primary">Agentic</span>
             <span>Kanban</span>
           </div>
-          <nav className="space-y-2 p-3" data-test-id="admin-navigation">
+          <nav className="space-y-2 p-3" data-testid="admin-navigation">
             {items.map(({ label, href, icon: Icon, testID }) => (
               <Link
                 className={cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground',
                   location.pathname === href && 'bg-accent font-medium text-accent-foreground',
                 )}
-                data-test-id={`admin-navigation-${testID}`}
+                data-testid={`admin-navigation-${testID}`}
                 key={href}
                 to={href}
               >
@@ -54,25 +54,25 @@ export function AdminShell({ children, title, projectID }: AdminShellProps) {
           </nav>
         </aside>
       )}
-      <div className="min-w-0" data-test-id="admin-workspace">
-        <header className="flex h-16 items-center justify-between bg-glass px-4 shadow-card outline outline-1 outline-outline backdrop-blur-[20px] md:px-8" data-test-id="admin-topbar">
-          <div className="flex items-center gap-2" data-test-id="admin-topbar-leading">
+      <div className="min-w-0" data-testid="admin-workspace">
+        <header className="flex h-16 items-center justify-between bg-glass px-4 shadow-card outline outline-1 outline-outline backdrop-blur-[20px] md:px-8" data-testid="admin-topbar">
+          <div className="flex items-center gap-2" data-testid="admin-topbar-leading">
             <Button
               aria-label={sidebarOpen ? '收起侧栏' : '展开侧栏'}
               className="hidden -ml-2 md:inline-flex"
-              data-test-id="admin-sidebar-toggle"
+              data-testid="admin-sidebar-toggle"
               onClick={() => setSidebarOpen((open) => !open)}
               size="icon"
               variant="ghost"
             >
               {sidebarOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
             </Button>
-            <h1 className="text-lg font-semibold tracking-tight" data-test-id="admin-page-title">{title}</h1>
+            <h1 className="text-lg font-semibold tracking-tight" data-testid="admin-page-title">{title}</h1>
           </div>
-          <div className="flex items-center gap-2" data-test-id="admin-topbar-actions">
+          <div className="flex items-center gap-2" data-testid="admin-topbar-actions">
             <ThemeToggle dataTestId="admin-theme-toggle" />
             <Button
-              data-test-id="admin-logout"
+              data-testid="admin-logout"
               onClick={() => api.logout().finally(() => navigate('/login'))}
               size="sm"
               variant="outline"
@@ -82,7 +82,7 @@ export function AdminShell({ children, title, projectID }: AdminShellProps) {
             </Button>
           </div>
         </header>
-        <main className="p-4 md:p-8" data-test-id="admin-content">{children}</main>
+        <main className="p-4 md:p-8" data-testid="admin-content">{children}</main>
       </div>
     </div>
   )

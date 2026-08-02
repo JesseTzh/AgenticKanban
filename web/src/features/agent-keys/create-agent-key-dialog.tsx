@@ -30,24 +30,24 @@ export function CreateAgentKeyDialog() {
   }
   return (
     <Dialog onOpenChange={changeOpen} open={open}>
-      <DialogTrigger asChild><Button data-test-id="create-agent-key-open"><Plus className="size-4" />创建密钥</Button></DialogTrigger>
-      <DialogContent data-test-id="create-agent-key-dialog">
-        <DialogHeader data-test-id="create-agent-key-header">
-          <DialogTitle data-test-id="create-agent-key-title">创建 Agent 密钥</DialogTitle>
-          <DialogDescription data-test-id="create-agent-key-description">使用 Bearer 密钥访问 Agent 专用接口。</DialogDescription>
+      <DialogTrigger asChild><Button data-testid="create-agent-key-open"><Plus className="size-4" />创建密钥</Button></DialogTrigger>
+      <DialogContent data-testid="create-agent-key-dialog">
+        <DialogHeader data-testid="create-agent-key-header">
+          <DialogTitle data-testid="create-agent-key-title">创建 Agent 密钥</DialogTitle>
+          <DialogDescription data-testid="create-agent-key-description">使用 Bearer 密钥访问 Agent 专用接口。</DialogDescription>
         </DialogHeader>
         {created ? (
-          <div className="grid gap-3" data-test-id="create-agent-key-result">
-            <p className="text-sm text-muted-foreground" data-test-id="create-agent-key-warning">该密钥仅展示一次，请立即妥善保存。</p>
-            <code className="break-all rounded-md border bg-muted p-3 text-sm" data-test-id="create-agent-key-token">{created.token}</code>
+          <div className="grid gap-3" data-testid="create-agent-key-result">
+            <p className="text-sm text-muted-foreground" data-testid="create-agent-key-warning">该密钥仅展示一次，请立即妥善保存。</p>
+            <code className="break-all rounded-md border bg-muted p-3 text-sm" data-testid="create-agent-key-token">{created.token}</code>
           </div>
         ) : (
-          <form className="grid gap-4" data-test-id="create-agent-key-form" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}>
-            <div className="grid gap-2" data-test-id="create-agent-key-name-field">
-              <Label data-test-id="create-agent-key-name-label" htmlFor="create-agent-key-name">密钥名称</Label>
-              <Input data-test-id="create-agent-key-name" id="create-agent-key-name" onChange={(event) => setName(event.target.value)} required value={name} />
+          <form className="grid gap-4" data-testid="create-agent-key-form" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}>
+            <div className="grid gap-2" data-testid="create-agent-key-name-field">
+              <Label data-testid="create-agent-key-name-label" htmlFor="create-agent-key-name">密钥名称</Label>
+              <Input data-testid="create-agent-key-name" id="create-agent-key-name" onChange={(event) => setName(event.target.value)} required value={name} />
             </div>
-            <DialogFooter data-test-id="create-agent-key-footer"><Button data-test-id="create-agent-key-submit" disabled={!name || mutation.isPending} type="submit">生成密钥</Button></DialogFooter>
+            <DialogFooter data-testid="create-agent-key-footer"><Button data-testid="create-agent-key-submit" disabled={!name || mutation.isPending} type="submit">生成密钥</Button></DialogFooter>
           </form>
         )}
       </DialogContent>

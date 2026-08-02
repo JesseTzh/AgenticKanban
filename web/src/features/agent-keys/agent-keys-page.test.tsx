@@ -7,7 +7,7 @@ import { ThemeProvider } from '@/theme'
 import { api } from '@/lib/api'
 import { AgentKeysPage } from './agent-keys-page'
 
-configure({ testIdAttribute: 'data-test-id' })
+configure({ testIdAttribute: 'data-testid' })
 
 describe('AgentKeysPage', () => {
   beforeEach(() => {

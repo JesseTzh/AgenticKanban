@@ -24,13 +24,13 @@ export function CreateRepositoryDialog({ projectID }: { projectID: string }) {
   })
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger asChild><Button data-test-id="create-repository-open"><Plus className="size-4" />新增仓库</Button></DialogTrigger>
-      <DialogContent data-test-id="create-repository-dialog">
-        <DialogHeader data-test-id="create-repository-header"><DialogTitle data-test-id="create-repository-title">新增 Git 仓库</DialogTitle><DialogDescription data-test-id="create-repository-description">保存后会生成用于同步 Commit 的 Webhook 地址。</DialogDescription></DialogHeader>
-        <form className="space-y-4" data-test-id="create-repository-form" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}>
-          <div className="space-y-2" data-test-id="create-repository-name-field"><Label data-test-id="create-repository-name-label" htmlFor="repository-name">仓库名称</Label><Input data-test-id="create-repository-name" id="repository-name" onChange={(event) => setName(event.target.value)} required value={name} /></div>
-          <div className="space-y-2" data-test-id="create-repository-url-field"><Label data-test-id="create-repository-url-label" htmlFor="repository-url">Git URL</Label><Input data-test-id="create-repository-url" id="repository-url" onChange={(event) => setURL(event.target.value)} required value={url} /></div>
-          <DialogFooter data-test-id="create-repository-footer"><Button data-test-id="create-repository-submit" disabled={mutation.isPending} type="submit">保存仓库</Button></DialogFooter>
+      <DialogTrigger asChild><Button data-testid="create-repository-open"><Plus className="size-4" />新增仓库</Button></DialogTrigger>
+      <DialogContent data-testid="create-repository-dialog">
+        <DialogHeader data-testid="create-repository-header"><DialogTitle data-testid="create-repository-title">新增 Git 仓库</DialogTitle><DialogDescription data-testid="create-repository-description">保存后会生成用于同步 Commit 的 Webhook 地址。</DialogDescription></DialogHeader>
+        <form className="space-y-4" data-testid="create-repository-form" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}>
+          <div className="space-y-2" data-testid="create-repository-name-field"><Label data-testid="create-repository-name-label" htmlFor="repository-name">仓库名称</Label><Input data-testid="create-repository-name" id="repository-name" onChange={(event) => setName(event.target.value)} required value={name} /></div>
+          <div className="space-y-2" data-testid="create-repository-url-field"><Label data-testid="create-repository-url-label" htmlFor="repository-url">Git URL</Label><Input data-testid="create-repository-url" id="repository-url" onChange={(event) => setURL(event.target.value)} required value={url} /></div>
+          <DialogFooter data-testid="create-repository-footer"><Button data-testid="create-repository-submit" disabled={mutation.isPending} type="submit">保存仓库</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

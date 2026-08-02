@@ -7,7 +7,7 @@ import type { Task } from '@/types'
 import { TaskDetailDialog } from './task-detail-dialog'
 import { HumanReviewDialog } from './human-review-dialog'
 
-configure({ testIdAttribute: 'data-test-id' })
+configure({ testIdAttribute: 'data-testid' })
 
 const task: Task = {
   ID: 'task-1',

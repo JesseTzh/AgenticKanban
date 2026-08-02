@@ -7,7 +7,7 @@ export function ThemeToggle({ dataTestId }: { dataTestId: string }) {
   const nextLabel = mode === 'dark' ? '切换到日间模式' : '切换到夜间模式'
 
   return (
-    <Button aria-label={nextLabel} data-test-id={dataTestId} onClick={toggleMode} size="icon" variant="ghost">
+    <Button aria-label={nextLabel} data-testid={dataTestId} onClick={toggleMode} size="icon" variant="ghost">
       {mode === 'dark' ? <Sun /> : <Moon />}
     </Button>
   )

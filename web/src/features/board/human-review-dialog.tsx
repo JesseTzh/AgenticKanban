@@ -27,18 +27,18 @@ export function HumanReviewDialog({ onOpenChange, open, projectID, taskID }: { o
   }
   return (
     <Dialog onOpenChange={close} open={open}>
-      <DialogContent data-test-id={`human-review-dialog-${taskID}`}>
-        <DialogHeader data-test-id={`human-review-header-${taskID}`}>
-          <DialogTitle data-test-id={`human-review-title-${taskID}`}>人工审核 Agent 结果</DialogTitle>
-          <DialogDescription data-test-id={`human-review-description-${taskID}`}>填写审核意见后确认是否接受本次 Agent 输出。</DialogDescription>
+      <DialogContent data-testid={`human-review-dialog-${taskID}`}>
+        <DialogHeader data-testid={`human-review-header-${taskID}`}>
+          <DialogTitle data-testid={`human-review-title-${taskID}`}>人工审核 Agent 结果</DialogTitle>
+          <DialogDescription data-testid={`human-review-description-${taskID}`}>填写审核意见后确认是否接受本次 Agent 输出。</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-2" data-test-id={`human-review-note-field-${taskID}`}>
-          <Label data-test-id={`human-review-note-label-${taskID}`} htmlFor={`human-review-note-${taskID}`}>审核意见</Label>
-          <Input data-test-id={`human-review-note-${taskID}`} id={`human-review-note-${taskID}`} onChange={(event) => setNote(event.target.value)} required value={note} />
+        <div className="grid gap-2" data-testid={`human-review-note-field-${taskID}`}>
+          <Label data-testid={`human-review-note-label-${taskID}`} htmlFor={`human-review-note-${taskID}`}>审核意见</Label>
+          <Input data-testid={`human-review-note-${taskID}`} id={`human-review-note-${taskID}`} onChange={(event) => setNote(event.target.value)} required value={note} />
         </div>
-        <DialogFooter data-test-id={`human-review-footer-${taskID}`}>
-          <Button data-test-id={`human-review-reject-${taskID}`} disabled={!note || mutation.isPending} onClick={() => mutation.mutate('rejected')} type="button" variant="outline">退回重做</Button>
-          <Button data-test-id={`human-review-approve-${taskID}`} disabled={!note || mutation.isPending} onClick={() => mutation.mutate('approved')} type="button">审核通过</Button>
+        <DialogFooter data-testid={`human-review-footer-${taskID}`}>
+          <Button data-testid={`human-review-reject-${taskID}`} disabled={!note || mutation.isPending} onClick={() => mutation.mutate('rejected')} type="button" variant="outline">退回重做</Button>
+          <Button data-testid={`human-review-approve-${taskID}`} disabled={!note || mutation.isPending} onClick={() => mutation.mutate('approved')} type="button">审核通过</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

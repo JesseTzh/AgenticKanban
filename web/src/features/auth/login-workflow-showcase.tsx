@@ -170,15 +170,15 @@ export function LoginWorkflowShowcase() {
     <section
       aria-hidden="true"
       className={cn('login-showcase', reduceMotion && 'login-showcase-static')}
-      data-test-id="login-workflow-showcase"
+      data-testid="login-workflow-showcase"
       data-reduced-motion={reduceMotion ? 'true' : 'false'}
     >
-      <div className="login-showcase-grid" data-test-id="login-workflow-grid" />
-      <div className="login-showcase-glow" data-test-id="login-workflow-glow" />
-      <div className="login-showcase-copy" data-test-id="login-workflow-copy">
-        <p className="login-showcase-eyebrow" data-test-id="login-workflow-eyebrow">AGENTIC DELIVERY SYSTEM</p>
-        <h2 className="login-showcase-heading" data-test-id="login-workflow-heading">一个需求的完整交付生命线</h2>
-        <p className="login-showcase-description" data-test-id="login-workflow-description">从人工澄清到 Agent 拆解、提交审核、人工测试，同一张需求卡持续流转并保留每个关口状态。</p>
+      <div className="login-showcase-grid" data-testid="login-workflow-grid" />
+      <div className="login-showcase-glow" data-testid="login-workflow-glow" />
+      <div className="login-showcase-copy" data-testid="login-workflow-copy">
+        <p className="login-showcase-eyebrow" data-testid="login-workflow-eyebrow">AGENTIC DELIVERY SYSTEM</p>
+        <h2 className="login-showcase-heading" data-testid="login-workflow-heading">一个需求的完整交付生命线</h2>
+        <p className="login-showcase-description" data-testid="login-workflow-description">从人工澄清到 Agent 拆解、提交审核、人工测试，同一张需求卡持续流转并保留每个关口状态。</p>
       </div>
       <div
         className={cn(
@@ -186,7 +186,7 @@ export function LoginWorkflowShowcase() {
           isIntro && !reduceMotion && 'login-showcase-carousel-intro',
           isCycleRestart && 'login-showcase-carousel-restarting',
         )}
-        data-test-id="login-workflow-carousel"
+        data-testid="login-workflow-carousel"
       >
         <div
           className={cn(
@@ -198,16 +198,16 @@ export function LoginWorkflowShowcase() {
             isCycleRestart && 'login-showcase-task-restart',
             `login-showcase-task-${taskPhase}`,
           )}
-          data-test-id={`login-workflow-task-${taskStage.id}-${demand.id}`}
+          data-testid={`login-workflow-task-${taskStage.id}-${demand.id}`}
         >
-          <div className="login-showcase-task-row" data-test-id={`login-workflow-task-row-${taskStage.id}-${demand.id}`}>
-            <span className="login-showcase-task-label" data-test-id={`login-workflow-task-label-${taskStage.id}-${demand.id}`}>{demand.id}</span>
-            <TaskIcon className={cn('login-showcase-task-icon', taskStage.accent)} data-test-id={`login-workflow-task-icon-${taskStage.id}-${demand.id}`} />
+          <div className="login-showcase-task-row" data-testid={`login-workflow-task-row-${taskStage.id}-${demand.id}`}>
+            <span className="login-showcase-task-label" data-testid={`login-workflow-task-label-${taskStage.id}-${demand.id}`}>{demand.id}</span>
+            <TaskIcon className={cn('login-showcase-task-icon', taskStage.accent)} data-testid={`login-workflow-task-icon-${taskStage.id}-${demand.id}`} />
           </div>
-          <p className="login-showcase-task-title" data-test-id={`login-workflow-task-title-${taskStage.id}-${demand.id}`}>{demand.title}</p>
-          <p className="login-showcase-task-detail" data-test-id={`login-workflow-task-detail-${taskStage.id}-${demand.id}`}>{taskStage.detail}</p>
-          <div className="login-showcase-progress-row" data-test-id={`login-workflow-progress-row-${taskStage.id}-${demand.id}`}>
-            <div className="login-showcase-progress" data-test-id={`login-workflow-progress-${taskStage.id}-${demand.id}`}>
+          <p className="login-showcase-task-title" data-testid={`login-workflow-task-title-${taskStage.id}-${demand.id}`}>{demand.title}</p>
+          <p className="login-showcase-task-detail" data-testid={`login-workflow-task-detail-${taskStage.id}-${demand.id}`}>{taskStage.detail}</p>
+          <div className="login-showcase-progress-row" data-testid={`login-workflow-progress-row-${taskStage.id}-${demand.id}`}>
+            <div className="login-showcase-progress" data-testid={`login-workflow-progress-${taskStage.id}-${demand.id}`}>
               <div
                 className={cn(
                   'login-showcase-progress-fill',
@@ -215,34 +215,34 @@ export function LoginWorkflowShowcase() {
                   (handoff || isIntro) && 'login-showcase-progress-paused',
                   taskStage.accent,
                 )}
-                data-test-id={`login-workflow-progress-fill-${taskStage.id}-${demand.id}`}
+                data-testid={`login-workflow-progress-fill-${taskStage.id}-${demand.id}`}
               />
             </div>
-            <span className="login-showcase-agent" data-test-id={`login-workflow-agent-${taskStage.id}-${demand.id}`}>{phaseCopy[taskStage.mode][taskPhase]}</span>
+            <span className="login-showcase-agent" data-testid={`login-workflow-agent-${taskStage.id}-${demand.id}`}>{phaseCopy[taskStage.mode][taskPhase]}</span>
           </div>
-          <span className="login-showcase-task-status" data-test-id={`login-workflow-task-status-${taskStage.id}-${demand.id}`}>{taskStage.gate}</span>
-          <span className="login-showcase-code-stream" data-test-id={`login-workflow-code-${taskStage.id}-${demand.id}`}>{taskStage.mode === 'human' ? 'manual confirmation' : 'commit sha verified'}</span>
+          <span className="login-showcase-task-status" data-testid={`login-workflow-task-status-${taskStage.id}-${demand.id}`}>{taskStage.gate}</span>
+          <span className="login-showcase-code-stream" data-testid={`login-workflow-code-${taskStage.id}-${demand.id}`}>{taskStage.mode === 'human' ? 'manual confirmation' : 'commit sha verified'}</span>
         </div>
         {stages.map((stage, stageIndex) => {
           const StageIcon = stage.icon
           return (
             <Card
               className={cn('login-showcase-stage', stageStateClass(stageIndex, activeIndex))}
-              data-test-id={`login-workflow-stage-${stage.id}`}
+              data-testid={`login-workflow-stage-${stage.id}`}
               key={stage.id}
             >
-              <div className="login-showcase-stage-header" data-test-id={`login-workflow-stage-header-${stage.id}`}>
-                <StageIcon className={cn('login-showcase-stage-icon', stage.accent)} data-test-id={`login-workflow-stage-icon-${stage.id}`} />
-                <div data-test-id={`login-workflow-stage-copy-${stage.id}`}>
-                  <p className="login-showcase-stage-subtitle" data-test-id={`login-workflow-stage-subtitle-${stage.id}`}>{stage.subtitle}</p>
-                  <h3 className="login-showcase-stage-title" data-test-id={`login-workflow-stage-title-${stage.id}`}>{stage.title}</h3>
+              <div className="login-showcase-stage-header" data-testid={`login-workflow-stage-header-${stage.id}`}>
+                <StageIcon className={cn('login-showcase-stage-icon', stage.accent)} data-testid={`login-workflow-stage-icon-${stage.id}`} />
+                <div data-testid={`login-workflow-stage-copy-${stage.id}`}>
+                  <p className="login-showcase-stage-subtitle" data-testid={`login-workflow-stage-subtitle-${stage.id}`}>{stage.subtitle}</p>
+                  <h3 className="login-showcase-stage-title" data-testid={`login-workflow-stage-title-${stage.id}`}>{stage.title}</h3>
                 </div>
               </div>
-              <div className="login-showcase-stage-meta" data-test-id={`login-workflow-stage-meta-${stage.id}`}>
-                <span data-test-id={`login-workflow-stage-owner-${stage.id}`}>{stage.owner}</span>
-                <span className="login-showcase-stage-gate" data-test-id={`login-workflow-stage-gate-${stage.id}`}>{stage.gate}</span>
+              <div className="login-showcase-stage-meta" data-testid={`login-workflow-stage-meta-${stage.id}`}>
+                <span data-testid={`login-workflow-stage-owner-${stage.id}`}>{stage.owner}</span>
+                <span className="login-showcase-stage-gate" data-testid={`login-workflow-stage-gate-${stage.id}`}>{stage.gate}</span>
               </div>
-              <div className="login-showcase-task-list" data-test-id={`login-workflow-task-list-${stage.id}`} />
+              <div className="login-showcase-task-list" data-testid={`login-workflow-task-list-${stage.id}`} />
             </Card>
           )
         })}

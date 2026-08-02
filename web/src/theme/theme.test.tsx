@@ -6,7 +6,7 @@ import { ThemeToggle } from './theme-toggle'
 import { applyThemeTokens, darkModeQuery, mergeThemeTokens, persistMode, readStoredMode, resolveThemeMode, themeStorageKey } from './theme'
 import { themes } from './themes'
 
-configure({ testIdAttribute: 'data-test-id' })
+configure({ testIdAttribute: 'data-testid' })
 
 function createMediaQuery(matches = false) {
   const listeners = new Set<EventListenerOrEventListenerObject>()
