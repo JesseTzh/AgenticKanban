@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { applyThemeMode, darkModeQuery, persistMode, readStoredMode, resolveThemeMode } from './theme'
+import { applyThemeMode, nighttimeStartHour, daytimeStartHour, resolveThemeMode } from './theme'
 import type { ThemeMode } from './tokens'
 
 type ThemeContextValue = {
@@ -17,12 +17,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [mode])
 
   useEffect(() => {
-    const media = window.matchMedia(darkModeQuery)
-    const updateFromSystem = (event: MediaQueryListEvent) => {
-      if (!readStoredMode()) setMode(event.matches ? 'dark' : 'light')
+    // Re-evaluate at the next local day/night boundary while the page remains open.
+    let timeout: number | undefined
+    const scheduleNextBoundary = () => {
+      const now = new Date()
+      const next = new Date(now)
+      const hour = now.getHours()
+      const nextHour = hour < daytimeStartHour ? daytimeStartHour : hour < nighttimeStartHour ? nighttimeStartHour : daytimeStartHour
+      next.setHours(nextHour, 0, 0, 0)
+      if (next <= now) next.setDate(next.getDate() + 1)
+      timeout = window.setTimeout(() => {
+        setMode(resolveThemeMode())
+        scheduleNextBoundary()
+      }, Math.max(1, next.getTime() - now.getTime() + 50))
     }
-    media.addEventListener('change', updateFromSystem)
-    return () => media.removeEventListener('change', updateFromSystem)
+
+    scheduleNextBoundary()
+    return () => {
+      if (timeout !== undefined) window.clearTimeout(timeout)
+    }
   }, [])
 
   const value = useMemo(
@@ -30,7 +43,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       mode,
       toggleMode: () => {
         const nextMode = mode === 'dark' ? 'light' : 'dark'
-        persistMode(nextMode)
         setMode(nextMode)
       },
     }),

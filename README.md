@@ -24,7 +24,7 @@ Demo 使用内置数据，登录页可输入任意用户名和密码进入。演
 
 ## 界面预览
 
-![AgenticKanban 登录界面](docs/img/login-screenshot.png)
+![AgenticKanban 登录界面](docs/img/login.webp)
 
 ## 文档目录
 

@@ -3,6 +3,14 @@ import { themeTokenVariables, type ThemeMode, type ThemeOverrides, type ThemeTok
 
 export const themeStorageKey = 'agentic-kanban-theme'
 export const darkModeQuery = '(prefers-color-scheme: dark)'
+export const daytimeStartHour = 6
+export const nighttimeStartHour = 18
+
+/** Resolve the theme from the browser's local clock. */
+export function resolveTimeBasedThemeMode(date = new Date()): ThemeMode {
+  const hour = date.getHours()
+  return hour >= daytimeStartHour && hour < nighttimeStartHour ? 'light' : 'dark'
+}
 
 export function mergeThemeTokens(defaults: ThemeTokens, overrides: ThemeOverrides = {}): ThemeTokens {
   const merged = { ...defaults }
@@ -36,8 +44,8 @@ export function persistMode(mode: ThemeMode, storage?: Storage) {
   }
 }
 
-export function resolveThemeMode(storage: Storage | undefined = undefined, media = window.matchMedia(darkModeQuery)): ThemeMode {
-  return readStoredMode(storage) ?? (media.matches ? 'dark' : 'light')
+export function resolveThemeMode(_storage?: Storage, _media?: MediaQueryList, date = new Date()): ThemeMode {
+  return resolveTimeBasedThemeMode(date)
 }
 
 export function applyThemeMode(mode: ThemeMode, root = document.documentElement) {

@@ -131,9 +131,10 @@ describe('admin application', () => {
       </ThemeProvider>,
     )
 
+    const initialModeIsDark = document.documentElement.classList.contains('dark')
     fireEvent.click(screen.getByTestId('login-theme-toggle'))
 
-    expect(document.documentElement).toHaveClass('dark')
+    expect(document.documentElement.classList.contains('dark')).toBe(!initialModeIsDark)
     expect(screen.getByTestId('login-workflow-showcase')).toBeInTheDocument()
     expect(screen.getByTestId('login-workflow-grid')).toBeInTheDocument()
   })

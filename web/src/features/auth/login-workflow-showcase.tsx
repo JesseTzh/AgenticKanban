@@ -416,8 +416,8 @@ export function LoginWorkflowShowcase() {
       <div className="login-showcase-glow" data-testid="login-workflow-glow" />
       <div className="login-showcase-copy" data-testid="login-workflow-copy">
         <p className="login-showcase-eyebrow" data-testid="login-workflow-eyebrow">AGENTIC DELIVERY SYSTEM</p>
-        <h2 className="login-showcase-heading" data-testid="login-workflow-heading">一个需求的完整交付生命线</h2>
-        <p className="login-showcase-description" data-testid="login-workflow-description">Agent 在每个阶段自主执行，关键结果由人确认；同一张需求卡持续流转并保留每个关口状态。</p>
+        <h2 className="login-showcase-heading whitespace-nowrap" data-testid="login-workflow-heading">面向 Agentic Coding 团队的交付管理系统</h2>
+        <p className="login-showcase-description whitespace-nowrap" data-testid="login-workflow-description">以看板为协作中心，任务需求在 Agent 智能体与人类工程师之间自由流转。</p>
       </div>
       <div
         className={cn(

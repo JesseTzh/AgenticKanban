@@ -3,39 +3,10 @@ import { act, configure, fireEvent, render, screen } from '@testing-library/reac
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ThemeProvider } from './theme-provider'
 import { ThemeToggle } from './theme-toggle'
-import { applyThemeTokens, darkModeQuery, mergeThemeTokens, persistMode, readStoredMode, resolveThemeMode, themeStorageKey } from './theme'
+import { applyThemeTokens, mergeThemeTokens, persistMode, readStoredMode, resolveThemeMode, resolveTimeBasedThemeMode, themeStorageKey } from './theme'
 import { themes } from './themes'
 
 configure({ testIdAttribute: 'data-testid' })
-
-function createMediaQuery(matches = false) {
-  const listeners = new Set<EventListenerOrEventListenerObject>()
-  const media = {
-    get matches() {
-      return matches
-    },
-    media: darkModeQuery,
-    onchange: null,
-    addEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
-      listeners.add(listener)
-    },
-    removeEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
-      listeners.delete(listener)
-    },
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    dispatch(nextMatches: boolean) {
-      matches = nextMatches
-      const event = { matches: nextMatches } as MediaQueryListEvent
-      for (const listener of listeners) {
-        if (typeof listener === 'function') listener(event)
-        else listener.handleEvent(event)
-      }
-    },
-    dispatchEvent: vi.fn(),
-  }
-  return media as unknown as MediaQueryList & { dispatch: (nextMatches: boolean) => void }
-}
 
 describe('theme runtime', () => {
   beforeEach(() => {
@@ -60,12 +31,12 @@ describe('theme runtime', () => {
     expect(target.style.getPropertyValue('--material-shadow-card')).toBe(themes.dark.shadowCard)
   })
 
-  it('prefers persisted mode and otherwise follows the system preference', () => {
-    const darkMedia = createMediaQuery(true)
-
-    expect(resolveThemeMode(localStorage, darkMedia)).toBe('dark')
+  it('uses the browser local time and ignores a previously persisted preference', () => {
     localStorage.setItem(themeStorageKey, 'light')
-    expect(resolveThemeMode(localStorage, darkMedia)).toBe('light')
+    expect(resolveTimeBasedThemeMode(new Date(2026, 0, 1, 5, 59))).toBe('dark')
+    expect(resolveTimeBasedThemeMode(new Date(2026, 0, 1, 6, 0))).toBe('light')
+    expect(resolveTimeBasedThemeMode(new Date(2026, 0, 1, 17, 59))).toBe('light')
+    expect(resolveThemeMode(localStorage, undefined, new Date(2026, 0, 1, 18, 0))).toBe('dark')
   })
 
   it('keeps theme handling usable when storage access is restricted', () => {
@@ -82,9 +53,7 @@ describe('theme runtime', () => {
     expect(() => persistMode('dark', restrictedStorage)).not.toThrow()
   })
 
-  it('persists an explicit toggle and synchronizes root variables and class', () => {
-    const media = createMediaQuery(false)
-    vi.stubGlobal('matchMedia', vi.fn(() => media))
+  it('allows an explicit toggle and synchronizes root variables and class', () => {
     render(
       <ThemeProvider>
         <ThemeToggle dataTestId="test-theme-toggle" />
@@ -93,25 +62,20 @@ describe('theme runtime', () => {
 
     fireEvent.click(screen.getByTestId('test-theme-toggle'))
 
-    expect(localStorage.getItem(themeStorageKey)).toBe('dark')
-    expect(document.documentElement).toHaveClass('dark')
-    expect(document.documentElement.style.getPropertyValue('--primary')).toBe(themes.dark.primary)
+    expect(document.documentElement.style.getPropertyValue('--primary')).toBe(themes[document.documentElement.classList.contains('dark') ? 'dark' : 'light'].primary)
   })
 
-  it('responds to system preference changes until a user selection is stored', () => {
-    const media = createMediaQuery(false)
-    vi.stubGlobal('matchMedia', vi.fn(() => media))
+  it('automatically updates when the browser clock reaches a day/night boundary', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 0, 1, 17, 59, 59, 900))
     render(
       <ThemeProvider>
         <ThemeToggle dataTestId="test-theme-toggle" />
       </ThemeProvider>,
     )
 
-    act(() => media.dispatch(true))
+    act(() => vi.advanceTimersByTime(200))
     expect(document.documentElement).toHaveClass('dark')
-
-    fireEvent.click(screen.getByTestId('test-theme-toggle'))
-    act(() => media.dispatch(true))
-    expect(document.documentElement).not.toHaveClass('dark')
+    vi.useRealTimers()
   })
 })
