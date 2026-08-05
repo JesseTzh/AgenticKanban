@@ -10,15 +10,19 @@ export const demoProjects: Project[] = [
 export const demoStages: Stage[] = [
   { Key: 'requirement_clarification', Name: '需求澄清', Position: 0 },
   { Key: 'technical_breakdown', Name: '技术拆解', Position: 1 },
-  { Key: 'code_review', Name: '代码审核', Position: 2 },
-  { Key: 'test_acceptance', Name: '测试验收', Position: 3 },
+  { Key: 'code_implementation', Name: '代码实现', Position: 2 },
+  { Key: 'code_review', Name: '代码审核', Position: 3 },
+  { Key: 'test_acceptance', Name: '测试验收', Position: 4 },
+  { Key: 'archive', Name: '归档', Position: 5 },
 ]
 
 export const demoTasks: Task[] = [
   { ID: 'demo-task-dashboard', ProjectID: projectID, ParentID: '', Title: '定义项目健康度看板', Description: '梳理项目健康度指标、数据来源与展示优先级。', StageKey: 'requirement_clarification', Status: 'not_ready', AgentReady: false, Completed: false, AgentID: '' },
   { ID: 'demo-task-notifications', ProjectID: projectID, ParentID: '', Title: '拆解通知中心实现方案', Description: '完成通知中心的技术拆解与依赖识别。', StageKey: 'technical_breakdown', Status: 'pending_human_review', AgentReady: false, Completed: false, AgentID: 'delivery-agent' },
+  { ID: 'demo-task-implementation', ProjectID: projectID, ParentID: '', Title: '实现任务历史查询', Description: '根据已审核的技术方案完成接口与页面实现。', StageKey: 'code_implementation', Status: 'in_progress', AgentReady: false, Completed: false, AgentID: 'delivery-agent' },
   { ID: 'demo-task-webhook', ProjectID: projectID, ParentID: '', Title: '接入仓库 Webhook 校验', Description: '校验 GitHub 推送事件并关联 Commit。', StageKey: 'code_review', Status: 'agentic_ready', AgentReady: true, Completed: false, AgentID: 'review-agent' },
   { ID: 'demo-task-release', ProjectID: projectID, ParentID: '', Title: '发布候选版本验收', Description: '执行跨浏览器验收并确认发布结果。', StageKey: 'test_acceptance', Status: 'not_ready', AgentReady: false, Completed: false, AgentID: '' },
+  { ID: 'demo-task-archived', ProjectID: projectID, ParentID: '', Title: '日志导出优化', Description: '已完成验收并归档。', StageKey: 'archive', Status: 'review_passed', AgentReady: false, Completed: true, AgentID: '' },
 ]
 
 export const demoRepositories: Repository[] = [

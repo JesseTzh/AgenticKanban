@@ -31,11 +31,13 @@ describe('theme runtime', () => {
     expect(target.style.getPropertyValue('--material-shadow-card')).toBe(themes.dark.shadowCard)
   })
 
-  it('uses the browser local time and ignores a previously persisted preference', () => {
+  it('uses a persisted preference and falls back to local time in automatic mode', () => {
     localStorage.setItem(themeStorageKey, 'light')
     expect(resolveTimeBasedThemeMode(new Date(2026, 0, 1, 5, 59))).toBe('dark')
     expect(resolveTimeBasedThemeMode(new Date(2026, 0, 1, 6, 0))).toBe('light')
     expect(resolveTimeBasedThemeMode(new Date(2026, 0, 1, 17, 59))).toBe('light')
+    expect(resolveThemeMode(localStorage, undefined, new Date(2026, 0, 1, 18, 0))).toBe('light')
+    localStorage.setItem(themeStorageKey, 'auto')
     expect(resolveThemeMode(localStorage, undefined, new Date(2026, 0, 1, 18, 0))).toBe('dark')
   })
 
@@ -53,16 +55,25 @@ describe('theme runtime', () => {
     expect(() => persistMode('dark', restrictedStorage)).not.toThrow()
   })
 
-  it('allows an explicit toggle and synchronizes root variables and class', () => {
+  it('cycles display modes and synchronizes storage, variables, and class', () => {
     render(
       <ThemeProvider>
         <ThemeToggle dataTestId="test-theme-toggle" />
       </ThemeProvider>,
     )
 
+    expect(screen.getByTestId('test-theme-toggle-status')).toHaveTextContent('当前：自动切换')
+    fireEvent.click(screen.getByTestId('test-theme-toggle'))
+    expect(localStorage.getItem(themeStorageKey)).toBe('light')
+    expect(document.documentElement).not.toHaveClass('dark')
+    expect(screen.getByTestId('test-theme-toggle-status')).toHaveTextContent('当前：日间模式')
+
     fireEvent.click(screen.getByTestId('test-theme-toggle'))
 
-    expect(document.documentElement.style.getPropertyValue('--primary')).toBe(themes[document.documentElement.classList.contains('dark') ? 'dark' : 'light'].primary)
+    expect(localStorage.getItem(themeStorageKey)).toBe('dark')
+    expect(document.documentElement).toHaveClass('dark')
+    expect(document.documentElement.style.getPropertyValue('--primary')).toBe(themes.dark.primary)
+    expect(screen.queryByTestId('test-theme-toggle-menu')).not.toBeInTheDocument()
   })
 
   it('automatically updates when the browser clock reaches a day/night boundary', () => {

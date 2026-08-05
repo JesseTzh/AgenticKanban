@@ -247,12 +247,24 @@ func (s *Store) ClaimTask(ctx context.Context, id, agentID string) error {
 	if !t.AgentReady || t.Status != domain.StatusAgenticReady || !isAgentStage(t.StageKey) {
 		return ErrInvalidTransition
 	}
-	_, err = s.db.ExecContext(ctx, `UPDATE tasks SET status=?,agent_ready=0,agent_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`, domain.StatusInProgress, agentID, id)
-	if err == nil {
-		s.hist(ctx, id, t.StageKey, t.Status, t.StageKey, domain.StatusInProgress, agentID, "agent claim")
-		s.audit(ctx, agentID, "agent.claim", "task", id, "")
+	toStage := t.StageKey
+	if t.StageKey == domain.StageTechnicalBreakdown {
+		toStage = domain.StageCodeImplementation
 	}
-	return err
+	result, err := s.db.ExecContext(ctx, `UPDATE tasks SET stage_key=?,status=?,agent_ready=0,agent_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND stage_key=? AND status=? AND agent_ready=1`, toStage, domain.StatusInProgress, agentID, id, t.StageKey, domain.StatusAgenticReady)
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return ErrInvalidTransition
+	}
+	s.hist(ctx, id, t.StageKey, t.Status, toStage, domain.StatusInProgress, agentID, "agent claim")
+	s.audit(ctx, agentID, "agent.claim", "task", id, "")
+	return nil
 }
 func (s *Store) SubmitBreakdown(ctx context.Context, id, agentID, result string) error {
 	t, err := s.GetTask(ctx, id)
@@ -270,7 +282,7 @@ func (s *Store) SubmitDevelopment(ctx context.Context, id, agentID, result strin
 	if err != nil {
 		return err
 	}
-	if err := requireClaimedTask(t, agentID, domain.StageTechnicalBreakdown); err != nil {
+	if err := requireClaimedTask(t, agentID, domain.StageCodeImplementation); err != nil {
 		return err
 	}
 	return s.submitAgentRun(ctx, t, agentID, domain.AgentWorkDevelopment, result, nil, domain.StageCodeReview, domain.StatusAgenticReady, true, commitSHAs)
@@ -580,11 +592,12 @@ func (s *Store) CompleteTask(ctx context.Context, taskID, actor string) error {
 	if err != nil {
 		return err
 	}
-	if t.StageKey != domain.StageTestAcceptance {
+	if t.StageKey != domain.StageTestAcceptance || t.Completed {
 		return ErrInvalidTransition
 	}
-	_, err = s.db.ExecContext(ctx, `UPDATE tasks SET completed=1,agent_ready=0,updated_at=CURRENT_TIMESTAMP WHERE id=?`, taskID)
+	_, err = s.db.ExecContext(ctx, `UPDATE tasks SET stage_key=?,status=?,completed=1,agent_ready=0,updated_at=CURRENT_TIMESTAMP WHERE id=?`, domain.StageArchive, domain.StatusReviewPassed, taskID)
 	if err == nil {
+		s.hist(ctx, taskID, t.StageKey, t.Status, domain.StageArchive, domain.StatusReviewPassed, actor, "test acceptance confirmed; task archived")
 		s.audit(ctx, actor, "task.complete", "task", taskID, "")
 	}
 	return err

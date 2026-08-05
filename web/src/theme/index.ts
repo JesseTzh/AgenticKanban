@@ -15,4 +15,4 @@ export {
   themeStorageKey,
 } from './theme'
 export { themes } from './themes'
-export { themeTokenVariables, type ThemeMode, type ThemeOverrides, type ThemeTokens } from './tokens'
+export { themeTokenVariables, type ThemeMode, type ThemeOverrides, type ThemePreference, type ThemeTokens } from './tokens'

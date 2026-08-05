@@ -27,7 +27,7 @@ describe('AgentKeysPage', () => {
     render(<ThemeProvider><QueryClientProvider client={queryClient}><MemoryRouter><AgentKeysPage /></MemoryRouter></QueryClientProvider></ThemeProvider>)
 
     expect(await screen.findByText('existing')).toBeInTheDocument()
-    expect(screen.getByTestId('admin-navigation-agent-keys')).toBeInTheDocument()
+    expect(screen.getByTestId('admin-profile-trigger')).toBeInTheDocument()
     fireEvent.click(screen.getByTestId('create-agent-key-open'))
     fireEvent.change(screen.getByTestId('create-agent-key-name'), { target: { value: 'codex-local' } })
     fireEvent.click(screen.getByTestId('create-agent-key-submit'))

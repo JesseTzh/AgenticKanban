@@ -186,9 +186,10 @@ func demoTasks() []taskFixture {
 	return []taskFixture{
 		{"seed_tsk_requirements", "seed_prj_delivery", "", "[Demo] 梳理通知中心需求", "需求澄清阶段示例任务。", domain.StageRequirementClarification, domain.StatusNotReady, "", "manager", false, false},
 		{"seed_tsk_breakdown", "seed_prj_delivery", "", "[Demo] 拆解权限管理模块", "技术拆解阶段示例任务。", domain.StageTechnicalBreakdown, domain.StatusAgenticReady, "", "manager", true, false},
+		{"seed_tsk_implementation", "seed_prj_delivery", "", "[Demo] 实现任务历史查询", "代码实现阶段示例任务。", domain.StageCodeImplementation, domain.StatusInProgress, "seed_agent_delivery", "manager", false, false},
 		{"seed_tsk_review", "seed_prj_delivery", "", "[Demo] 增加看板拖拽交互", "代码审核阶段示例任务。", domain.StageCodeReview, domain.StatusAgenticReady, "", "manager", true, false},
 		{"seed_tsk_test", "seed_prj_delivery", "", "[Demo] 加强 Session 校验", "测试验收阶段示例任务。", domain.StageTestAcceptance, domain.StatusNotReady, "", "manager", false, false},
-		{"seed_tsk_completed", "seed_prj_delivery", "", "[Demo] 优化登录流程", "已经人工确认完成的示例任务。", domain.StageTestAcceptance, domain.StatusNotReady, "", "manager", false, true},
+		{"seed_tsk_completed", "seed_prj_delivery", "", "[Demo] 优化登录流程", "已经人工确认完成并归档的示例任务。", domain.StageArchive, domain.StatusReviewPassed, "", "manager", false, true},
 		{"seed_tsk_reference", "seed_prj_delivery", "", "[Demo] 复用登录流程任务", "引用历史任务的示例任务。", domain.StageRequirementClarification, domain.StatusNotReady, "", "manager", false, false},
 		{"seed_tsk_portal", "seed_prj_portal", "", "[Demo] 规划内部门户导航", "辅助演示项目中的示例任务。", domain.StageRequirementClarification, domain.StatusNotReady, "", "manager", false, false},
 	}

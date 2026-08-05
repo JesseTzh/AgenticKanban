@@ -30,7 +30,7 @@ export function TaskCard({ projectID, task }: { projectID: string; task: Task })
     <>
       <Card
         aria-label={`查看任务详情：${task.Title}`}
-        className="flex cursor-pointer flex-col gap-2 py-3 transition-[background-color,box-shadow] hover:bg-surface-bright hover:shadow-button-hover"
+        className="board-task-card flex cursor-pointer flex-col gap-3 py-3"
         data-testid={`task-card-${task.ID}`}
         onClick={() => setDetailsOpen(true)}
         onKeyDown={openDetailsFromKeyboard}
@@ -51,7 +51,7 @@ export function TaskCard({ projectID, task }: { projectID: string; task: Task })
               {canReleaseToAgent ? <DropdownMenuItem data-testid={`task-agent-ready-${task.ID}`} onSelect={() => mutation.mutate(() => api.markTaskAgentReady(task.ID))}>开放给 Agent</DropdownMenuItem> : null}
               {canHumanReview ? <DropdownMenuItem data-testid={`task-human-review-${task.ID}`} onSelect={() => setReviewOpen(true)}>人工审核</DropdownMenuItem> : null}
               {task.StageKey === 'test_acceptance' && !task.Completed ? <DropdownMenuItem data-testid={`task-test-failed-${task.ID}`} onSelect={() => mutation.mutate(() => api.testRecord(task.ID, { Verdict: 'failed', Note: '测试失败' }))}>测试失败</DropdownMenuItem> : null}
-              {task.StageKey === 'test_acceptance' && !task.Completed ? <DropdownMenuItem data-testid={`task-complete-${task.ID}`} onSelect={() => mutation.mutate(() => api.completeTask(task.ID))}>确认完成</DropdownMenuItem> : null}
+              {task.StageKey === 'test_acceptance' && !task.Completed ? <DropdownMenuItem data-testid={`task-complete-${task.ID}`} onSelect={() => mutation.mutate(() => api.completeTask(task.ID))}>确认验收并归档</DropdownMenuItem> : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </CardFooter>

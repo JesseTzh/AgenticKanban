@@ -22,7 +22,7 @@ export function CreateTaskDialog({ projectID }: { projectID: string }) {
   })
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger asChild><Button data-testid="create-task-open"><Plus className="size-4" />创建任务</Button></DialogTrigger>
+      <DialogTrigger asChild><Button className="shadow-dialog" data-testid="create-task-open"><Plus className="size-4" data-testid="create-task-open-icon" />创建任务</Button></DialogTrigger>
       <DialogContent data-testid="create-task-dialog">
         <DialogHeader data-testid="create-task-header"><DialogTitle data-testid="create-task-dialog-title">创建需求任务</DialogTitle><DialogDescription data-testid="create-task-description">任务会进入需求澄清阶段。</DialogDescription></DialogHeader>
         <form className="space-y-4" data-testid="create-task-form" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}>

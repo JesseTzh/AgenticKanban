@@ -1,4 +1,5 @@
 export type ThemeMode = 'light' | 'dark'
+export type ThemePreference = 'auto' | ThemeMode
 
 export type ThemeTokens = {
   background: string

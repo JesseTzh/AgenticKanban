@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { api } from '@/lib/api'
 import { queryKeys } from '@/lib/query-client'
+import { cn } from '@/lib/utils'
 
-export function CreateProjectDialog() {
+export function CreateProjectDialog({ className, label = '新建项目' }: { className?: string; label?: string }) {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
@@ -24,7 +25,10 @@ export function CreateProjectDialog() {
   return (
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
-        <Button data-testid="create-project-open"><Plus className="size-4" />新建项目</Button>
+        <Button className={cn(className)} data-testid="create-project-open">
+          <Plus className="size-4" data-testid="create-project-open-icon" />
+          {label}
+        </Button>
       </DialogTrigger>
       <DialogContent data-testid="create-project-dialog">
         <DialogHeader data-testid="create-project-header">

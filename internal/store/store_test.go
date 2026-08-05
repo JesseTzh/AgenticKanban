@@ -41,8 +41,14 @@ func TestProjectCreatesDefaultBoard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := len(stages), 4; got != want {
+	if got, want := len(stages), 6; got != want {
 		t.Fatalf("stages=%d want=%d", got, want)
+	}
+	if stages[2].Key != domain.StageCodeImplementation || stages[2].Name != "代码实现" {
+		t.Fatalf("code implementation stage=%+v", stages[2])
+	}
+	if stages[5].Key != domain.StageArchive || stages[5].Name != "归档" {
+		t.Fatalf("archive stage=%+v", stages[5])
 	}
 }
 
@@ -82,6 +88,10 @@ func TestAgentWorkflowBreakdownDevelopmentAndCodeReview(t *testing.T) {
 	if err := st.ClaimTask(ctx, task.ID, "agent-1"); err != nil {
 		t.Fatal(err)
 	}
+	task, _ = st.GetTask(ctx, task.ID)
+	if task.StageKey != domain.StageCodeImplementation || task.Status != domain.StatusInProgress || task.AgentReady {
+		t.Fatalf("after development claim task=%+v", task)
+	}
 	repo, _ := st.CreateRepository(ctx, domain.Repository{ProjectID: p.ID, Name: "main"}, "u")
 	commit := domain.Commit{ID: "commit-1", SHA: "abc123", Message: "done", Author: "u", Branch: "main"}
 	if err := st.SaveWebhookEventAndCommits(ctx, repo, "", nil, []domain.Commit{commit}); err != nil {
@@ -106,6 +116,13 @@ func TestAgentWorkflowBreakdownDevelopmentAndCodeReview(t *testing.T) {
 	task, _ = st.GetTask(ctx, task.ID)
 	if task.StageKey != domain.StageTestAcceptance || task.Status != domain.StatusNotReady || task.AgentReady {
 		t.Fatalf("after review task=%+v", task)
+	}
+	if err := st.CompleteTask(ctx, task.ID, "reviewer"); err != nil {
+		t.Fatal(err)
+	}
+	task, _ = st.GetTask(ctx, task.ID)
+	if task.StageKey != domain.StageArchive || task.Status != domain.StatusReviewPassed || !task.Completed {
+		t.Fatalf("after archive task=%+v", task)
 	}
 	detail, err := st.GetAgentWorkDetail(ctx, task.ID)
 	if err != nil {
@@ -216,7 +233,7 @@ func TestCompleteTaskMarksTestAcceptanceTaskCompleted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !task.Completed {
+	if task.StageKey != domain.StageArchive || !task.Completed {
 		t.Fatal("expected completed task")
 	}
 }

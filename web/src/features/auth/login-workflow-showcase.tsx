@@ -2,8 +2,10 @@ import { useEffect, useReducer, useState, type ComponentType, type CSSProperties
 import {
   BadgeCheck,
   Bot,
+  Archive,
   BrainCircuit,
   CheckCircle2,
+  Code2,
   Cpu,
   GitBranch,
   MousePointer2,
@@ -19,7 +21,7 @@ import { cn } from '@/lib/utils'
 type AnimationPhase = 'idle' | 'executing' | 'awaiting' | 'confirming' | 'moving'
 type ActivePhase = Exclude<AnimationPhase, 'idle' | 'moving'>
 type Icon = ComponentType<SVGProps<SVGSVGElement>>
-type StageMode = 'human' | 'agent' | 'hybrid'
+type StageMode = 'human' | 'agent' | 'hybrid' | 'terminal'
 type StageAccent = 'primary' | 'secondary' | 'warning' | 'success'
 type ShowcaseTask = { id: string; title: string }
 type BackgroundTask = ShowcaseTask & { status: string }
@@ -91,6 +93,21 @@ const stages: WorkflowStage[] = [
     ],
   },
   {
+    id: 'implementation',
+    title: 'Code Implementation',
+    subtitle: '代码实现',
+    agentAction: '正在编写代码、执行测试并整理 Commit',
+    mode: 'agent',
+    icon: Code2,
+    accent: 'primary',
+    tasks: [
+      { id: 'AK-801', title: '任务历史查询', status: '实现中' },
+      { id: 'AK-786', title: '通知投递重试', status: '编码中' },
+      { id: 'AK-775', title: '权限缓存失效', status: '测试中' },
+      { id: 'AK-764', title: '导出任务详情', status: '待提交' },
+    ],
+  },
+  {
     id: 'review',
     title: 'Code Review',
     subtitle: '代码审核',
@@ -120,6 +137,21 @@ const stages: WorkflowStage[] = [
       { id: 'AK-776', title: '暗色模式适配', status: '待验收' },
       { id: 'AK-768', title: '移动端看板布局', status: '验证中' },
       { id: 'AK-757', title: '错误提示规范化', status: '待验收' },
+    ],
+  },
+  {
+    id: 'archive',
+    title: 'Archive',
+    subtitle: '归档',
+    agentAction: '已完成验收并归档交付记录',
+    mode: 'terminal',
+    icon: Archive,
+    accent: 'success',
+    tasks: [
+      { id: 'AK-792', title: '通知中心重构', status: '已归档' },
+      { id: 'AK-779', title: '审计日志导出', status: '已归档' },
+      { id: 'AK-766', title: '会员邀请流程', status: '已归档' },
+      { id: 'AK-754', title: '登录体验优化', status: '已归档' },
     ],
   },
 ]

@@ -89,7 +89,7 @@ describe('admin application', () => {
       </ThemeProvider>,
     )
 
-    expect(screen.getByTestId('login-version-tag')).toHaveTextContent(/^ver\. \d{6}-[0-9a-f]{7}$/)
+    expect(screen.getByTestId('login-version-tag')).toHaveTextContent(/^ver\.\d{6}-[0-9a-f]{7}$/)
     await waitFor(() => expect(screen.getByTestId('login-health-indicator')).toHaveClass('login-health-indicator-healthy'))
     expect(screen.getByTestId('login-health-indicator')).toHaveAttribute('title', '后端服务运行正常')
   })
@@ -105,8 +105,10 @@ describe('admin application', () => {
 
     expect(screen.getByTestId('login-workflow-stage-requirements')).toBeInTheDocument()
     expect(screen.getByTestId('login-workflow-stage-breakdown')).toBeInTheDocument()
+    expect(screen.getByTestId('login-workflow-stage-implementation')).toBeInTheDocument()
     expect(screen.getByTestId('login-workflow-stage-review')).toBeInTheDocument()
     expect(screen.getByTestId('login-workflow-stage-qa')).toBeInTheDocument()
+    expect(screen.getByTestId('login-workflow-stage-archive')).toBeInTheDocument()
     expect(screen.queryByTestId('login-workflow-stage-meta-review')).not.toBeInTheDocument()
     expect(screen.queryByTestId('login-workflow-stage-owner-review')).not.toBeInTheDocument()
     expect(screen.queryByTestId('login-workflow-stage-gate-review')).not.toBeInTheDocument()
@@ -122,7 +124,7 @@ describe('admin application', () => {
     expect(screen.getByTestId('login-workflow-showcase')).not.toHaveTextContent(/HANDOFF|进度条/)
   })
 
-  it('keeps the workflow showcase mounted when the login theme changes', () => {
+  it('keeps the workflow showcase mounted when the login theme preference changes', () => {
     render(
       <ThemeProvider>
         <MemoryRouter>
@@ -131,10 +133,11 @@ describe('admin application', () => {
       </ThemeProvider>,
     )
 
-    const initialModeIsDark = document.documentElement.classList.contains('dark')
+    fireEvent.click(screen.getByTestId('login-theme-toggle'))
     fireEvent.click(screen.getByTestId('login-theme-toggle'))
 
-    expect(document.documentElement.classList.contains('dark')).toBe(!initialModeIsDark)
+    expect(document.documentElement).toHaveClass('dark')
+    expect(localStorage.getItem('agentic-kanban-theme')).toBe('dark')
     expect(screen.getByTestId('login-workflow-showcase')).toBeInTheDocument()
     expect(screen.getByTestId('login-workflow-grid')).toBeInTheDocument()
   })
@@ -229,8 +232,8 @@ describe('admin application', () => {
     expect(screen.getByTestId('login-workflow-drop-slot-breakdown')).toHaveClass('login-showcase-drop-slot-open')
     const nextProgress = screen.getByTestId('login-workflow-progress-fill-breakdown-AK-802')
     expect(nextProgress).not.toBe(progress)
-    expect(nextProgress.style.getPropertyValue('--login-showcase-progress-start')).toBe('0.25')
-    expect(nextProgress.style.getPropertyValue('--login-showcase-progress-end')).toBe('0.5')
+    expect(nextProgress.style.getPropertyValue('--login-showcase-progress-start')).toBe('0.16666666666666666')
+    expect(nextProgress.style.getPropertyValue('--login-showcase-progress-end')).toBe('0.3333333333333333')
     expect(nextProgress.style.getPropertyValue('--login-showcase-progress-duration')).toBe('3000ms')
     expect(nextProgress).not.toHaveClass('login-showcase-progress-paused')
   })
@@ -257,6 +260,10 @@ describe('admin application', () => {
     act(() => vi.advanceTimersByTime(1400))
 
     act(() => vi.advanceTimersByTime(2200))
+    act(() => vi.advanceTimersByTime(800))
+    act(() => vi.advanceTimersByTime(1400))
+
+    act(() => vi.advanceTimersByTime(2200))
     act(() => vi.advanceTimersByTime(1400))
     act(() => vi.advanceTimersByTime(800))
     act(() => vi.advanceTimersByTime(1400))
@@ -264,9 +271,13 @@ describe('admin application', () => {
     act(() => vi.advanceTimersByTime(2200))
     act(() => vi.advanceTimersByTime(1400))
     act(() => vi.advanceTimersByTime(800))
+    act(() => vi.advanceTimersByTime(1400))
+
+    act(() => vi.advanceTimersByTime(2200))
+    act(() => vi.advanceTimersByTime(800))
 
     expect(screen.getByTestId('login-workflow-carousel')).toHaveClass('login-showcase-carousel-restarting')
-    expect(screen.getByTestId('login-workflow-progress-fill-qa-AK-802')).toHaveClass('login-showcase-progress-paused')
+    expect(screen.getByTestId('login-workflow-progress-fill-archive-AK-802')).toHaveClass('login-showcase-progress-paused')
 
     act(() => vi.advanceTimersByTime(1400))
 
@@ -341,7 +352,7 @@ describe('admin application', () => {
     await waitFor(() => expect(api.login).toHaveBeenCalledWith('admin', '', true))
   })
 
-  it('renders project navigation in the authenticated shell', () => {
+  it('renders the authenticated top bar and personal menu', async () => {
     render(
       <ThemeProvider>
         <MemoryRouter>
@@ -352,33 +363,16 @@ describe('admin application', () => {
       </ThemeProvider>,
     )
 
-    expect(screen.getByRole('link', { name: '项目列表' })).toHaveAttribute('href', '/projects')
-    expect(screen.getByRole('link', { name: 'Agent 密钥' })).toHaveAttribute('href', '/agent-keys')
-    expect(screen.getByRole('link', { name: '任务看板' })).toHaveAttribute('href', '/projects/project-1')
-    expect(screen.getByRole('link', { name: '仓库与交付物' })).toHaveAttribute('href', '/projects/project-1/repositories')
+    expect(screen.getByRole('link', { name: '返回项目列表' })).toHaveAttribute('href', '/projects')
     expect(screen.getByTestId('admin-theme-toggle')).toBeInTheDocument()
+    expect(screen.getByTestId('admin-profile-trigger')).toBeInTheDocument()
+    expect(screen.queryByTestId('admin-version-tag')).not.toBeInTheDocument()
     expect(screen.getByTestId('admin-content')).toBeInTheDocument()
-  })
 
-  it('toggles the authenticated shell sidebar from the top bar', () => {
-    render(
-      <ThemeProvider>
-        <MemoryRouter>
-          <AdminShell title="任务看板" projectID="project-1">
-            <div>看板内容</div>
-          </AdminShell>
-        </MemoryRouter>
-      </ThemeProvider>,
-    )
-
-    fireEvent.click(screen.getByTestId('admin-sidebar-toggle'))
-
+    fireEvent.pointerDown(screen.getByTestId('admin-profile-trigger'), { button: 0, ctrlKey: false, pointerType: 'mouse' })
+    expect(await screen.findByTestId('admin-version-tag')).toHaveTextContent(/^ver\.\d{6}-[0-9a-f]{7}$/)
+    expect(await screen.findByTestId('admin-profile-agent-keys-link')).toHaveAttribute('href', '/agent-keys')
+    expect(screen.getByTestId('admin-profile-logout')).toHaveTextContent('退出登录')
     expect(screen.queryByTestId('admin-sidebar')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '展开侧栏' })).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: '展开侧栏' }))
-
-    expect(screen.getByTestId('admin-sidebar')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '收起侧栏' })).toBeInTheDocument()
   })
 })

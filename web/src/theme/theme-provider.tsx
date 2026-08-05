@@ -1,22 +1,31 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { applyThemeMode, nighttimeStartHour, daytimeStartHour, resolveThemeMode } from './theme'
-import type { ThemeMode } from './tokens'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { applyThemeMode, nighttimeStartHour, daytimeStartHour, persistMode, readStoredMode, resolveTimeBasedThemeMode } from './theme'
+import type { ThemeMode, ThemePreference } from './tokens'
 
 type ThemeContextValue = {
   mode: ThemeMode
-  toggleMode: () => void
+  preference: ThemePreference
+  setPreference: (preference: ThemePreference) => void
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setMode] = useState<ThemeMode>(() => resolveThemeMode())
+  const [preference, setPreferenceState] = useState<ThemePreference>(() => readStoredMode() ?? 'auto')
+  const [autoMode, setAutoMode] = useState<ThemeMode>(() => resolveTimeBasedThemeMode())
+  const mode = preference === 'auto' ? autoMode : preference
 
   useEffect(() => {
     applyThemeMode(mode)
   }, [mode])
 
   useEffect(() => {
+    persistMode(preference)
+  }, [preference])
+
+  useEffect(() => {
+    if (preference !== 'auto') return
+
     // Re-evaluate at the next local day/night boundary while the page remains open.
     let timeout: number | undefined
     const scheduleNextBoundary = () => {
@@ -27,29 +36,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       next.setHours(nextHour, 0, 0, 0)
       if (next <= now) next.setDate(next.getDate() + 1)
       timeout = window.setTimeout(() => {
-        setMode(resolveThemeMode())
+        setAutoMode(resolveTimeBasedThemeMode())
         scheduleNextBoundary()
       }, Math.max(1, next.getTime() - now.getTime() + 50))
     }
 
+    setAutoMode(resolveTimeBasedThemeMode())
     scheduleNextBoundary()
     return () => {
       if (timeout !== undefined) window.clearTimeout(timeout)
     }
-  }, [])
+  }, [preference])
 
-  const value = useMemo(
-    () => ({
-      mode,
-      toggleMode: () => {
-        const nextMode = mode === 'dark' ? 'light' : 'dark'
-        setMode(nextMode)
-      },
-    }),
-    [mode],
-  )
+  function setPreference(nextPreference: ThemePreference) {
+    setPreferenceState(nextPreference)
+  }
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  return <ThemeContext.Provider value={{ mode, preference, setPreference }}>{children}</ThemeContext.Provider>
 }
 
 export function useTheme() {

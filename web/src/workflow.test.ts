@@ -8,6 +8,8 @@ describe('workflow helpers', () => {
   })
 
   it('returns Chinese stage name', () => {
+    expect(stageName('code_implementation')).toBe('代码实现')
     expect(stageName('code_review')).toBe('代码审核')
+    expect(stageName('archive')).toBe('归档')
   })
 })

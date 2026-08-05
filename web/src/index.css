@@ -63,6 +63,151 @@
     @apply bg-surface-low outline outline-1 outline-outline;
   }
 
+  .admin-main-grid {
+    @apply pointer-events-none absolute inset-0 opacity-50;
+    background-image:
+      linear-gradient(to right, color-mix(in srgb, var(--primary) 7%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--primary) 7%, transparent) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: linear-gradient(to bottom, black, transparent 80%);
+  }
+
+  .admin-main-glow {
+    @apply pointer-events-none absolute inset-x-0 top-0 h-[30rem];
+    background:
+      radial-gradient(circle at 18% 8%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 28%),
+      radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 24%);
+  }
+
+  .board-page {
+    @apply relative -mt-5 md:-mt-8;
+  }
+
+  .board-heading {
+    @apply mb-7 flex items-end justify-between gap-6;
+  }
+
+  .board-title-mark {
+    @apply grid size-11 shrink-0 place-items-center rounded-sm rounded-br-xl bg-primary text-primary-foreground shadow-button-hover;
+  }
+
+  .board-title-mark svg {
+    @apply size-5;
+  }
+
+  .board-eyebrow {
+    @apply font-mono text-[9px] font-semibold tracking-[0.2em] text-primary;
+  }
+
+  .board-title {
+    @apply mt-1 text-[22px] font-semibold leading-tight text-foreground;
+    letter-spacing: -0.02em;
+  }
+
+  .board-summary {
+    @apply flex min-w-28 flex-col items-end rounded-sm rounded-br-xl bg-surface-low px-4 py-3 text-[10px] font-semibold text-muted-foreground shadow-card;
+  }
+
+  .board-summary strong {
+    @apply mt-1 font-mono text-xl font-semibold text-primary;
+  }
+
+  .board-columns {
+    @apply overflow-x-auto pb-24;
+    scrollbar-color: color-mix(in srgb, var(--primary) 40%, transparent) transparent;
+  }
+
+  .board-columns-grid {
+    @apply grid min-w-max grid-cols-6 gap-4;
+  }
+
+  .board-column {
+    @apply flex min-h-[34rem] w-72 flex-col overflow-hidden rounded-sm rounded-br-xl bg-surface-low/90 p-2.5 backdrop-blur-[12px] xl:w-[19rem];
+  }
+
+  .board-column-header {
+    @apply mb-3 flex min-h-14 items-center justify-between gap-3 rounded-sm bg-background/75 px-3 py-2.5;
+  }
+
+  .board-column-index {
+    @apply grid size-7 shrink-0 place-items-center rounded-sm bg-primary font-mono text-[9px] font-semibold text-primary-foreground;
+  }
+
+  .board-column-count {
+    @apply min-w-7 justify-center px-2 font-mono text-[10px] shadow-none outline-0;
+  }
+
+  .board-column-tasks {
+    @apply flex flex-1 flex-col gap-3;
+  }
+
+  .board-column-empty {
+    @apply flex min-h-44 flex-1 flex-col items-center justify-center rounded-sm rounded-br-lg bg-background/45 px-6 text-center;
+  }
+
+  .board-empty-icon {
+    @apply mb-3 grid size-9 place-items-center rounded-sm bg-surface-high text-muted-foreground shadow-input;
+  }
+
+  .board-empty-icon svg {
+    @apply size-4;
+  }
+
+  .board-task-card {
+    @apply rounded-sm rounded-br-lg bg-card shadow-none outline-0 backdrop-blur-[20px] transition-[background-color,box-shadow,transform];
+  }
+
+  .board-task-card:hover {
+    @apply bg-surface-bright shadow-card;
+    transform: translateY(-2px);
+  }
+
+  html:not(.dark) .board-column {
+    background: rgb(235 236 239 / 0.92);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.82),
+      0 12px 32px rgb(0 30 45 / 0.045);
+  }
+
+  html:not(.dark) .board-column-header {
+    background: rgb(245 246 248 / 0.96);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9);
+  }
+
+  html:not(.dark) .board-task-card {
+    background: #ffffff;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.95),
+      0 7px 18px rgb(0 30 45 / 0.055);
+  }
+
+  html:not(.dark) .board-task-card:hover {
+    box-shadow: 0 12px 24px rgb(0 30 45 / 0.1);
+  }
+
+  html:not(.dark) .board-column-empty {
+    background: rgb(245 246 248 / 0.72);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.75);
+  }
+
+  .dark .board-column {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+  }
+
+  .dark .board-task-card:hover {
+    box-shadow: 0 0 18px rgb(16 213 255 / 0.12);
+  }
+
+  @media (max-width: 640px) {
+    .board-heading {
+      @apply items-start;
+    }
+
+    .board-summary {
+      @apply min-w-20 px-3;
+    }
+  }
+
   .precision-progress {
     @apply h-px overflow-hidden bg-muted;
   }

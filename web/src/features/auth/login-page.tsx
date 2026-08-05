@@ -57,7 +57,7 @@ export function LoginPage() {
         <LoginWorkflowShowcase />
         <div className="absolute bottom-6 left-6 z-20" data-testid="login-version-region">
           <Badge className="login-version-tag" data-testid="login-version-tag" title={`版本 ${appVersion}`} variant="outline">
-            ver. {appVersion}
+            ver.{appVersion}
           </Badge>
         </div>
       </div>

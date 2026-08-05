@@ -273,8 +273,14 @@ func TestFullHumanAndCommitFlow(t *testing.T) {
 	if err := json.Unmarshal(responseData(t, rr), &stages); err != nil {
 		t.Fatal(err)
 	}
-	if len(stages) != 4 {
+	if len(stages) != 6 {
 		t.Fatalf("stages=%d", len(stages))
+	}
+	if stages[2].Key != domain.StageCodeImplementation {
+		t.Fatalf("code implementation stage=%+v", stages[2])
+	}
+	if stages[5].Key != domain.StageArchive {
+		t.Fatalf("archive stage=%+v", stages[5])
 	}
 
 	rr, taskBody := doJSON(t, r, http.MethodPost, "/api/projects/"+projectID+"/tasks", map[string]any{"Title": "Build feature", "StageKey": "code_review", "Status": "agentic_ready"}, cookie)
@@ -309,6 +315,10 @@ func TestFullHumanAndCommitFlow(t *testing.T) {
 	rr, _ = doAgentJSON(t, r, http.MethodPost, "/api/agent/tasks/"+taskID+"/claim", nil, token)
 	if rr.Code != 200 {
 		t.Fatalf("claim development code=%d body=%s", rr.Code, rr.Body.String())
+	}
+	rr, claimedTaskBody := doJSON(t, r, http.MethodGet, "/api/tasks/"+taskID, nil, cookie)
+	if rr.Code != 200 || claimedTaskBody["StageKey"] != domain.StageCodeImplementation || claimedTaskBody["Status"] != domain.StatusInProgress {
+		t.Fatalf("claimed development task code=%d task=%v", rr.Code, claimedTaskBody)
 	}
 	rr, _ = doAgentJSON(t, r, http.MethodPost, "/api/agent/tasks/"+taskID+"/submit-development", map[string]any{"Result": "done", "CommitSHAs": []string{"missing"}}, token)
 	assertErrorEnvelope(t, rr, 409, "commit_sha_not_found", "commit sha not found: missing")
@@ -353,6 +363,10 @@ func TestFullHumanAndCommitFlow(t *testing.T) {
 	rr, _ = doJSON(t, r, http.MethodPost, "/api/tasks/"+taskID+"/complete", nil, cookie)
 	if rr.Code != 200 {
 		t.Fatalf("complete code=%d body=%s", rr.Code, rr.Body.String())
+	}
+	rr, archivedTaskBody := doJSON(t, r, http.MethodGet, "/api/tasks/"+taskID, nil, cookie)
+	if rr.Code != 200 || archivedTaskBody["StageKey"] != domain.StageArchive || archivedTaskBody["Status"] != domain.StatusReviewPassed || archivedTaskBody["Completed"] != true {
+		t.Fatalf("archived task code=%d task=%v", rr.Code, archivedTaskBody)
 	}
 	rr, referenceBody := doJSON(t, r, http.MethodPost, "/api/projects/"+projectID+"/tasks", map[string]any{"Title": "Reference context"}, cookie)
 	if rr.Code != 201 {

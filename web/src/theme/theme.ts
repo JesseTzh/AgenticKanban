@@ -1,5 +1,5 @@
 import { themes } from './themes'
-import { themeTokenVariables, type ThemeMode, type ThemeOverrides, type ThemeTokens } from './tokens'
+import { themeTokenVariables, type ThemeMode, type ThemeOverrides, type ThemePreference, type ThemeTokens } from './tokens'
 
 export const themeStorageKey = 'agentic-kanban-theme'
 export const darkModeQuery = '(prefers-color-scheme: dark)'
@@ -26,16 +26,16 @@ export function applyThemeTokens(tokens: ThemeTokens, root = document.documentEl
   }
 }
 
-export function readStoredMode(storage?: Storage): ThemeMode | null {
+export function readStoredMode(storage?: Storage): ThemePreference | null {
   try {
     const mode = (storage ?? window.localStorage).getItem(themeStorageKey)
-    return mode === 'light' || mode === 'dark' ? mode : null
+    return mode === 'auto' || mode === 'light' || mode === 'dark' ? mode : null
   } catch {
     return null
   }
 }
 
-export function persistMode(mode: ThemeMode, storage?: Storage) {
+export function persistMode(mode: ThemePreference, storage?: Storage) {
   try {
     const target = storage ?? window.localStorage
     target.setItem(themeStorageKey, mode)
@@ -44,8 +44,9 @@ export function persistMode(mode: ThemeMode, storage?: Storage) {
   }
 }
 
-export function resolveThemeMode(_storage?: Storage, _media?: MediaQueryList, date = new Date()): ThemeMode {
-  return resolveTimeBasedThemeMode(date)
+export function resolveThemeMode(storage?: Storage, _media?: MediaQueryList, date = new Date()): ThemeMode {
+  const preference = readStoredMode(storage) ?? 'auto'
+  return preference === 'auto' ? resolveTimeBasedThemeMode(date) : preference
 }
 
 export function applyThemeMode(mode: ThemeMode, root = document.documentElement) {
