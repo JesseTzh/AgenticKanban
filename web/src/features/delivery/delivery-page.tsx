@@ -18,27 +18,75 @@ export function DeliveryPage() {
   const pending = repos.isPending || commits.isPending
   return (
     <AdminShell projectID={projectID} title="仓库与交付物">
-      <div className="mb-6 flex items-center justify-between" data-testid="delivery-heading">
-        <div data-testid="delivery-heading-copy"><h2 className="text-2xl font-semibold" data-testid="delivery-title">仓库与交付物</h2><p className="text-sm text-muted-foreground" data-testid="delivery-description">管理 Webhook，并查看同步 Commit。</p></div>
-        <CreateRepositoryDialog projectID={projectID} />
-      </div>
+      <header className="page-heading" data-testid="delivery-heading">
+        <div className="page-heading-copy" data-testid="delivery-heading-copy">
+          <p className="page-eyebrow" data-testid="delivery-eyebrow">DELIVERY SOURCES</p>
+          <h1 className="page-title" data-testid="delivery-title">仓库与交付物</h1>
+          <p className="page-description" data-testid="delivery-description">管理 Webhook，并查看同步 Commit。</p>
+        </div>
+        <div className="page-heading-actions" data-testid="delivery-heading-actions">
+          <CreateRepositoryDialog projectID={projectID} />
+        </div>
+      </header>
       <ErrorAlert error={repos.error || commits.error} />
       {pending ? <PageLoading /> : null}
       {!pending ? (
-        <Tabs data-testid="delivery-tabs" defaultValue="repositories">
-          <TabsList data-testid="delivery-tabs-list">
+        <Tabs className="space-y-4" data-testid="delivery-tabs" defaultValue="repositories">
+          <TabsList className="w-full justify-start overflow-x-auto sm:w-auto" data-testid="delivery-tabs-list">
             <TabsTrigger data-testid="delivery-tab-repositories" value="repositories">仓库</TabsTrigger>
             <TabsTrigger data-testid="delivery-tab-commits" value="commits">Commit</TabsTrigger>
           </TabsList>
-          <TabsContent data-testid="delivery-repositories-content" value="repositories">
-            <Card data-testid="repositories-panel"><CardContent className="pt-6" data-testid="repositories-panel-content"><Table data-testid="repositories-table"><TableHeader><TableRow><TableHead>仓库</TableHead><TableHead>Git URL</TableHead><TableHead>Webhook</TableHead><TableHead>状态</TableHead></TableRow></TableHeader><TableBody>
-              {repos.data?.map((repo) => <TableRow data-testid={`repository-row-${repo.ID}`} key={repo.ID}><TableCell className="font-medium">{repo.Name}</TableCell><TableCell>{repo.GitURL}</TableCell><TableCell className="max-w-xs break-all font-mono text-xs">/api/webhooks/{repo.ID}/{repo.WebhookSecret}</TableCell><TableCell><Badge variant={repo.WebhookEnabled ? 'secondary' : 'outline'}>{repo.WebhookEnabled ? '启用' : '禁用'}</Badge></TableCell></TableRow>)}
-            </TableBody></Table></CardContent></Card>
+          <TabsContent className="mt-0" data-testid="delivery-repositories-content" value="repositories">
+            <Card className="overflow-hidden rounded-sm rounded-br-xl" data-testid="repositories-panel">
+              <CardContent className="p-0" data-testid="repositories-panel-content">
+                <Table data-testid="repositories-table">
+                  <TableHeader data-testid="repositories-table-header">
+                    <TableRow data-testid="repositories-table-header-row">
+                      <TableHead className="min-w-40 px-4" data-testid="repositories-table-name-heading">仓库</TableHead>
+                      <TableHead className="min-w-64" data-testid="repositories-table-url-heading">Git URL</TableHead>
+                      <TableHead className="min-w-72" data-testid="repositories-table-webhook-heading">Webhook</TableHead>
+                      <TableHead className="w-24 px-4" data-testid="repositories-table-status-heading">状态</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody data-testid="repositories-table-body">
+                    {repos.data?.map((repo) => (
+                      <TableRow data-testid={`repository-row-${repo.ID}`} key={repo.ID}>
+                        <TableCell className="px-4 font-medium" data-testid={`repository-name-${repo.ID}`}>{repo.Name}</TableCell>
+                        <TableCell data-testid={`repository-url-${repo.ID}`}>{repo.GitURL}</TableCell>
+                        <TableCell className="max-w-xs break-all font-mono text-xs" data-testid={`repository-webhook-${repo.ID}`}>/api/webhooks/{repo.ID}/{repo.WebhookSecret}</TableCell>
+                        <TableCell className="px-4" data-testid={`repository-status-${repo.ID}`}><Badge data-testid={`repository-status-badge-${repo.ID}`} variant={repo.WebhookEnabled ? 'secondary' : 'outline'}>{repo.WebhookEnabled ? '启用' : '禁用'}</Badge></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           </TabsContent>
-          <TabsContent data-testid="delivery-commits-content" value="commits">
-            <Card data-testid="commits-panel"><CardContent className="pt-6" data-testid="commits-panel-content"><Table data-testid="commits-table"><TableHeader><TableRow><TableHead>SHA</TableHead><TableHead>消息</TableHead><TableHead>作者</TableHead><TableHead>分支</TableHead></TableRow></TableHeader><TableBody>
-              {commits.data?.map((commit) => <TableRow data-testid={`commit-row-${commit.ID}`} key={commit.ID}><TableCell className="font-mono text-xs">{commit.SHA}</TableCell><TableCell>{commit.Message}</TableCell><TableCell>{commit.Author}</TableCell><TableCell>{commit.Branch}</TableCell></TableRow>)}
-            </TableBody></Table></CardContent></Card>
+          <TabsContent className="mt-0" data-testid="delivery-commits-content" value="commits">
+            <Card className="overflow-hidden rounded-sm rounded-br-xl" data-testid="commits-panel">
+              <CardContent className="p-0" data-testid="commits-panel-content">
+                <Table data-testid="commits-table">
+                  <TableHeader data-testid="commits-table-header">
+                    <TableRow data-testid="commits-table-header-row">
+                      <TableHead className="min-w-40 px-4" data-testid="commits-table-sha-heading">SHA</TableHead>
+                      <TableHead className="min-w-80" data-testid="commits-table-message-heading">消息</TableHead>
+                      <TableHead className="min-w-40" data-testid="commits-table-author-heading">作者</TableHead>
+                      <TableHead className="min-w-32 px-4" data-testid="commits-table-branch-heading">分支</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody data-testid="commits-table-body">
+                    {commits.data?.map((commit) => (
+                      <TableRow data-testid={`commit-row-${commit.ID}`} key={commit.ID}>
+                        <TableCell className="px-4 font-mono text-xs" data-testid={`commit-sha-${commit.ID}`}>{commit.SHA}</TableCell>
+                        <TableCell data-testid={`commit-message-${commit.ID}`}>{commit.Message}</TableCell>
+                        <TableCell data-testid={`commit-author-${commit.ID}`}>{commit.Author}</TableCell>
+                        <TableCell className="px-4" data-testid={`commit-branch-${commit.ID}`}>{commit.Branch}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       ) : null}

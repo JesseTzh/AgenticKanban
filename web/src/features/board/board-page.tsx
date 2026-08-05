@@ -79,7 +79,7 @@ export function BoardPage() {
             </div>
           </div>
         ) : null}
-        <div className="fixed bottom-6 left-1/2 z-30 -translate-x-1/2" data-testid="board-create-task-floating">
+        <div className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 z-30 -translate-x-1/2" data-testid="board-create-task-floating">
           <CreateTaskDialog projectID={projectID} />
         </div>
       </section>

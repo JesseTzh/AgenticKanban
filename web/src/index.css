@@ -79,8 +79,37 @@
       radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 24%);
   }
 
+  .page-heading {
+    @apply mb-8 flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end;
+  }
+
+  .page-heading-copy {
+    @apply min-w-0 max-w-2xl;
+  }
+
+  .page-eyebrow {
+    @apply mb-2 font-mono text-[9px] font-semibold tracking-[0.2em] text-primary;
+  }
+
+  .page-title {
+    @apply text-2xl font-semibold leading-tight text-foreground md:text-3xl;
+    letter-spacing: -0.02em;
+  }
+
+  .page-description {
+    @apply mt-2 max-w-xl text-sm leading-6 text-muted-foreground;
+  }
+
+  .page-heading-actions {
+    @apply flex w-full shrink-0 items-center gap-3 sm:w-auto;
+  }
+
+  .data-panel {
+    @apply overflow-hidden rounded-sm rounded-br-xl bg-card shadow-card outline outline-1 outline-outline backdrop-blur-[20px];
+  }
+
   .board-page {
-    @apply relative -mt-5 md:-mt-8;
+    @apply relative -mt-3 md:-mt-4;
   }
 
   .board-heading {
@@ -88,11 +117,18 @@
   }
 
   .board-title-mark {
-    @apply grid size-11 shrink-0 place-items-center rounded-sm rounded-br-xl bg-primary text-primary-foreground shadow-button-hover;
+    @apply relative grid h-11 w-12 shrink-0 place-items-center text-primary;
+    padding-inline-start: 0.5rem;
+  }
+
+  .board-title-mark::before {
+    @apply absolute inset-y-0 w-1 rounded-sm bg-primary content-[''];
+    inset-inline-start: 0;
+    box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 28%, transparent);
   }
 
   .board-title-mark svg {
-    @apply size-5;
+    @apply size-6;
   }
 
   .board-eyebrow {
@@ -205,6 +241,10 @@
 
     .board-summary {
       @apply min-w-20 px-3;
+    }
+
+    .page-heading-actions > * {
+      @apply w-full;
     }
   }
 

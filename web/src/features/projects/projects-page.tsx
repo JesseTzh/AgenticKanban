@@ -17,33 +17,28 @@ export function ProjectsPage() {
   return (
     <AdminShell title="项目列表">
       <section data-testid="projects-page">
-        <div className="mb-10 flex items-end justify-between gap-6" data-testid="projects-heading">
-          <div data-testid="projects-heading-copy">
-            <div className="mb-3 flex items-center gap-3" data-testid="projects-eyebrow">
-              <span className="h-px w-10 bg-primary" data-testid="projects-eyebrow-line" />
-              <span className="text-[10px] font-bold tracking-[0.24em] text-primary uppercase" data-testid="projects-eyebrow-text">
-                Workspace Index
-              </span>
-            </div>
-            <h1 className="text-3xl font-semibold tracking-[-0.04em] md:text-5xl" data-testid="projects-title">选择工作空间</h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground md:text-base" data-testid="projects-description">
+        <div className="page-heading" data-testid="projects-heading">
+          <div className="page-heading-copy" data-testid="projects-heading-copy">
+            <p className="page-eyebrow" data-testid="projects-eyebrow-text">WORKSPACE INDEX</p>
+            <h1 className="page-title" data-testid="projects-title">选择工作空间</h1>
+            <p className="page-description" data-testid="projects-description">
               每个项目拥有独立的 Agentic 工作流、任务看板与交付记录。
             </p>
           </div>
-          {hasProjects ? <CreateProjectDialog className="shrink-0" /> : null}
+          {hasProjects ? <div className="page-heading-actions" data-testid="projects-heading-actions"><CreateProjectDialog className="shrink-0" /></div> : null}
         </div>
         <ErrorAlert error={projects.error} />
         {projects.isPending ? <PageLoading /> : null}
         {!projects.isPending ? (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3" data-testid="projects-grid">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="projects-grid">
             {projects.data?.map((project, index) => (
               <Link data-testid={`project-link-${project.ID}`} key={project.ID} to={`/projects/${project.ID}`}>
                 <Card
-                  className="group flex min-h-72 h-full flex-col overflow-hidden transition-[transform,background-color,box-shadow] duration-300 hover:-translate-y-1 hover:bg-surface-bright hover:shadow-button-hover"
+                  className="group flex h-full min-h-60 flex-col overflow-hidden transition-[transform,background-color,box-shadow] duration-300 hover:-translate-y-1 hover:bg-surface-bright hover:shadow-button-hover"
                   data-testid={`project-card-${project.ID}`}
                 >
                   <CardHeader className="flex-1" data-testid={`project-card-header-${project.ID}`}>
-                    <div className="mb-8 flex items-start justify-between" data-testid={`project-card-meta-${project.ID}`}>
+                    <div className="mb-6 flex items-start justify-between" data-testid={`project-card-meta-${project.ID}`}>
                       <span className="font-mono text-xs text-muted-foreground" data-testid={`project-card-index-${project.ID}`}>
                         {String(index + 1).padStart(2, '0')}
                       </span>
@@ -59,7 +54,7 @@ export function ProjectsPage() {
                       {project.Description || '默认 Agentic Kanban 工作空间'}
                     </CardDescription>
                   </CardHeader>
-                  <CardFooter className="justify-between border-t border-outline pt-5" data-testid={`project-card-footer-${project.ID}`}>
+                  <CardFooter className="justify-between bg-surface-low/70 py-4" data-testid={`project-card-footer-${project.ID}`}>
                     <Badge data-testid={`project-card-status-${project.ID}`} variant="outline">ACTIVE</Badge>
                     <span className="flex items-center gap-2 text-sm font-medium text-primary" data-testid={`project-card-action-${project.ID}`}>
                       进入看板
