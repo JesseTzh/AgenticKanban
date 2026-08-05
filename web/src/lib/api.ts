@@ -69,6 +69,8 @@ export const api = {
   tasks: (projectID: string) => request<Task[]>(`/api/projects/${projectID}/tasks`),
   createTask: (projectID: string, data: unknown) =>
     request(`/api/projects/${projectID}/tasks`, { method: 'POST', body: JSON.stringify(data) }),
+  updateTask: (taskID: string, data: Pick<Task, 'Title' | 'Description' | 'Detail'>) =>
+    request(`/api/tasks/${taskID}`, { method: 'PUT', body: JSON.stringify(data) }),
   markTaskAgentReady: (taskID: string) => request(`/api/tasks/${taskID}/agent-ready`, { method: 'POST' }),
   agentWork: (taskID: string) => request<AgentWorkDetail>(`/api/tasks/${taskID}/agent-work`),
   approveTask: (taskID: string, data: { Decision: string; Note: string }) =>

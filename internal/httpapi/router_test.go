@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -20,6 +21,7 @@ import (
 	"agentic-kanban/internal/domain"
 	"agentic-kanban/internal/httpapi"
 	"agentic-kanban/internal/permission"
+	filestorage "agentic-kanban/internal/storage"
 	"agentic-kanban/internal/store"
 
 	_ "modernc.org/sqlite"
@@ -51,7 +53,7 @@ func newRouterAndStore(t *testing.T, webDistPath string) (http.Handler, *store.S
 		t.Fatal(err)
 	}
 	st := store.New(database, slog.New(slog.NewTextHandler(os.Stdout, nil)))
-	cfg := config.Config{AppEnv: "test", HTTPAddr: ":0", SQLitePath: "", SessionSecret: "test-session", SessionTTL: 3600_000_000_000, AgentTokenSecret: "agent-secret", WebhookBaseURL: "http://example.test", WebDistPath: webDistPath, LogLevel: "debug"}
+	cfg := config.Config{AppEnv: "test", HTTPAddr: ":0", SQLitePath: "", SessionSecret: "test-session", SessionTTL: 3600_000_000_000, AgentTokenSecret: "agent-secret", WebhookBaseURL: "http://example.test", WebDistPath: webDistPath, LogLevel: "debug", UploadStorage: "local", UploadDir: t.TempDir()}
 	if err := auth.EnsureDefaultAdmin(context.Background(), st, "admin", "admin123", cfg.SessionSecret); err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +65,66 @@ func newRouterAndStore(t *testing.T, webDistPath string) (http.Handler, *store.S
 	if err != nil {
 		t.Fatal(err)
 	}
-	return httpapi.NewRouter(httpapi.Dependencies{Config: cfg, Logger: slog.Default(), Store: st, Cache: c, Perm: p}), st
+	uploader, err := filestorage.New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return httpapi.NewRouter(httpapi.Dependencies{Config: cfg, Logger: slog.Default(), Store: st, Cache: c, Perm: p, Upload: uploader}), st
+}
+
+func TestTaskDetailAndLocalImageUpload(t *testing.T) {
+	r := newRouter(t)
+	loginRR, _ := doJSON(t, r, http.MethodPost, "/api/auth/login", map[string]string{"username": "admin", "password": "admin123"}, nil)
+	cookie := loginRR.Result().Cookies()[0]
+	_, projectBody := doJSON(t, r, http.MethodPost, "/api/projects", map[string]string{"Name": "Docs"}, cookie)
+	projectID := projectBody["ID"].(string)
+	_, taskBody := doJSON(t, r, http.MethodPost, "/api/projects/"+projectID+"/tasks", map[string]string{"Title": "Markdown"}, cookie)
+	taskID := taskBody["ID"].(string)
+	detail := "## Acceptance\n\n- supports images"
+	rr, _ := doJSON(t, r, http.MethodPut, "/api/tasks/"+taskID, map[string]string{"Title": "Markdown", "Description": "", "Detail": detail}, cookie)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("update detail: %s", rr.Body.String())
+	}
+	_, updated := doJSON(t, r, http.MethodGet, "/api/tasks/"+taskID, nil, cookie)
+	if updated["Detail"] != detail {
+		t.Fatalf("Detail=%v", updated["Detail"])
+	}
+
+	var body bytes.Buffer
+	w := multipart.NewWriter(&body)
+	part, err := w.CreateFormFile("file[]", "pixel.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = part.Write([]byte{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a})
+	_ = w.Close()
+	req := httptest.NewRequest(http.MethodPost, "/api/tasks/"+taskID+"/images", &body)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.AddCookie(cookie)
+	uploadRR := httptest.NewRecorder()
+	r.ServeHTTP(uploadRR, req)
+	if uploadRR.Code != http.StatusOK {
+		t.Fatalf("upload: %s", uploadRR.Body.String())
+	}
+	var upload struct {
+		Code int `json:"code"`
+		Data struct {
+			SuccMap map[string]string `json:"succMap"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(uploadRR.Body.Bytes(), &upload); err != nil {
+		t.Fatal(err)
+	}
+	imageURL := upload.Data.SuccMap["pixel.png"]
+	if upload.Code != 0 || !strings.HasPrefix(imageURL, "/uploads/tasks/") {
+		t.Fatalf("upload=%s", uploadRR.Body.String())
+	}
+	imageReq := httptest.NewRequest(http.MethodGet, imageURL, nil)
+	imageRR := httptest.NewRecorder()
+	r.ServeHTTP(imageRR, imageReq)
+	if imageRR.Code != http.StatusOK {
+		t.Fatalf("image code=%d", imageRR.Code)
+	}
 }
 
 func TestStaticWebHosting(t *testing.T) {

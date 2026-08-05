@@ -17,6 +17,7 @@ import (
 	"agentic-kanban/internal/db"
 	"agentic-kanban/internal/httpapi"
 	"agentic-kanban/internal/permission"
+	filestorage "agentic-kanban/internal/storage"
 	"agentic-kanban/internal/store"
 )
 
@@ -68,6 +69,11 @@ func main() {
 		logger.Error("permission init failed", slog.Any("err", err))
 		os.Exit(1)
 	}
+	uploader, err := filestorage.New(cfg)
+	if err != nil {
+		logger.Error("image storage init failed", slog.Any("err", err))
+		os.Exit(1)
+	}
 
 	r := httpapi.NewRouter(httpapi.Dependencies{
 		Config: cfg,
@@ -75,6 +81,7 @@ func main() {
 		Store:  st,
 		Cache:  c,
 		Perm:   perm,
+		Upload: uploader,
 	})
 
 	srv := &http.Server{Addr: cfg.HTTPAddr, Handler: r, ReadHeaderTimeout: 5 * time.Second}

@@ -17,6 +17,7 @@ import (
 	"agentic-kanban/internal/config"
 	"agentic-kanban/internal/domain"
 	"agentic-kanban/internal/permission"
+	filestorage "agentic-kanban/internal/storage"
 	"agentic-kanban/internal/store"
 
 	"github.com/gin-gonic/gin"
@@ -28,6 +29,7 @@ type Dependencies struct {
 	Store  *store.Store
 	Cache  *cache.Cache
 	Perm   *permission.Enforcer
+	Upload *filestorage.Uploader
 }
 
 type api struct{ d Dependencies }
@@ -55,6 +57,7 @@ func NewRouter(d Dependencies) http.Handler {
 	authn.POST("/projects/:projectID/tasks", a.require("task", "write"), a.createTask)
 	authn.GET("/tasks/:taskID", a.require("task", "read"), a.task)
 	authn.PUT("/tasks/:taskID", a.require("task", "update"), a.updateTask)
+	authn.POST("/tasks/:taskID/images", a.require("task", "update"), a.uploadTaskImages)
 	authn.DELETE("/tasks/:taskID", a.require("task", "delete"), a.deleteTask)
 	authn.POST("/tasks/:taskID/agent-ready", a.require("task", "update"), a.markTaskAgentReady)
 	authn.GET("/tasks/:taskID/agent-work", a.require("task", "read"), a.agentWorkDetail)
@@ -80,6 +83,9 @@ func NewRouter(d Dependencies) http.Handler {
 	agent.POST("/tasks/:taskID/submit-breakdown", a.agentSubmitBreakdown)
 	agent.POST("/tasks/:taskID/submit-development", a.agentSubmitDevelopment)
 	agent.POST("/tasks/:taskID/submit-code-review", a.agentSubmitCodeReview)
+	if d.Upload != nil && d.Upload.LocalDir() != "" {
+		r.Static("/uploads", d.Upload.LocalDir())
+	}
 
 	webFiles := http.Dir(d.Config.WebDistPath)
 	webServer := http.FileServer(webFiles)
@@ -383,6 +389,44 @@ func (a *api) updateTask(c *gin.Context) {
 		return
 	}
 	success(c, 200, gin.H{"ok": true})
+}
+func (a *api) uploadTaskImages(c *gin.Context) {
+	if a.d.Upload == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 1, "msg": "image storage is unavailable", "data": gin.H{"errFiles": []string{}, "succMap": gin.H{}}})
+		return
+	}
+	if _, err := a.d.Store.GetTask(reqctx(c), c.Param("taskID")); err != nil {
+		bad(c, err)
+		return
+	}
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 1, "msg": err.Error(), "data": gin.H{"errFiles": []string{}, "succMap": gin.H{}}})
+		return
+	}
+	files := form.File["file[]"]
+	if len(files) == 0 {
+		files = form.File["file"]
+	}
+	succ := gin.H{}
+	errFiles := make([]string, 0)
+	for _, file := range files {
+		if err := filestorage.Validate(file); err != nil {
+			errFiles = append(errFiles, file.Filename)
+			continue
+		}
+		imageURL, err := a.d.Upload.Save(reqctx(c), file)
+		if err != nil {
+			errFiles = append(errFiles, file.Filename)
+			continue
+		}
+		succ[file.Filename] = imageURL
+	}
+	code, message := 0, ""
+	if len(succ) == 0 {
+		code, message = 1, "image upload failed"
+	}
+	c.JSON(http.StatusOK, gin.H{"code": code, "msg": message, "data": gin.H{"errFiles": errFiles, "succMap": succ}})
 }
 func (a *api) deleteTask(c *gin.Context) {
 	if err := a.d.Store.DeleteTask(reqctx(c), c.Param("taskID"), actor(c)); err != nil {

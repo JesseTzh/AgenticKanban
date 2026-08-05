@@ -6,4 +6,7 @@ services:
       - "8080:8080"
     volumes:
       - ./data:/app/data
+    environment:
+      UPLOAD_STORAGE: local
+      UPLOAD_DIR: /app/data/uploads
     restart: unless-stopped

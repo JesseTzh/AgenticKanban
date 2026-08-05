@@ -52,6 +52,16 @@
   body {
     @apply bg-background font-sans text-foreground antialiased;
   }
+
+  .task-markdown-editor .vditor {
+    border-color: var(--border);
+    border-radius: var(--radius-sm);
+  }
+
+  .task-markdown-editor .vditor-toolbar,
+  .task-markdown-editor .vditor-ir {
+    background: var(--background);
+  }
 }
 
 @layer components {

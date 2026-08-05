@@ -15,6 +15,7 @@ const task: Task = {
   ParentID: '',
   Title: 'Current task',
   Description: '',
+  Detail: '',
   StageKey: 'test_acceptance',
   Status: 'agentic_ready',
   AgentReady: true,

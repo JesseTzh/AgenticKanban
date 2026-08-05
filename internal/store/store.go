@@ -161,7 +161,7 @@ func (s *Store) CreateTask(ctx context.Context, t domain.Task, actor string) (do
 		t.Status = domain.StatusNotReady
 	}
 	t.AgentReady = t.Status == domain.StatusAgenticReady
-	_, err := s.db.ExecContext(ctx, `INSERT INTO tasks(id,project_id,parent_id,title,description,stage_key,status,agent_ready,completed,created_by) VALUES(?,?,?,?,?,?,?,?,?,?)`, t.ID, t.ProjectID, nullable(t.ParentID), t.Title, t.Description, t.StageKey, t.Status, t.AgentReady, t.Completed, actor)
+	_, err := s.db.ExecContext(ctx, `INSERT INTO tasks(id,project_id,parent_id,title,description,detail_markdown,stage_key,status,agent_ready,completed,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?)`, t.ID, t.ProjectID, nullable(t.ParentID), t.Title, t.Description, t.Detail, t.StageKey, t.Status, t.AgentReady, t.Completed, actor)
 	if err == nil {
 		s.hist(ctx, t.ID, "", "", t.StageKey, t.Status, actor, "create task")
 		s.audit(ctx, actor, "task.create", "task", t.ID, t.Title)
@@ -169,7 +169,7 @@ func (s *Store) CreateTask(ctx context.Context, t domain.Task, actor string) (do
 	return t, err
 }
 func (s *Store) ListTasks(ctx context.Context, projectID string) ([]domain.Task, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE project_id=? AND deleted_at IS NULL ORDER BY created_at DESC`, projectID)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,detail_markdown,stage_key,status,agent_ready,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE project_id=? AND deleted_at IS NULL ORDER BY created_at DESC`, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (s *Store) ListTasks(ctx context.Context, projectID string) ([]domain.Task,
 	return scanTasks(rows)
 }
 func (s *Store) ListAgentReadyTasks(ctx context.Context) ([]domain.Task, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE agent_ready=1 AND completed=0 AND status=? AND stage_key IN (?,?,?) AND deleted_at IS NULL ORDER BY created_at`,
+	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,detail_markdown,stage_key,status,agent_ready,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE agent_ready=1 AND completed=0 AND status=? AND stage_key IN (?,?,?) AND deleted_at IS NULL ORDER BY created_at`,
 		domain.StatusAgenticReady, domain.StageRequirementClarification, domain.StageTechnicalBreakdown, domain.StageCodeReview)
 	if err != nil {
 		return nil, err
@@ -186,7 +186,7 @@ func (s *Store) ListAgentReadyTasks(ctx context.Context) ([]domain.Task, error) 
 	return scanTasks(rows)
 }
 func (s *Store) GetTask(ctx context.Context, id string) (domain.Task, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,stage_key,status,agent_ready,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE id=? AND deleted_at IS NULL`, id)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,project_id,COALESCE(parent_id,''),title,description,detail_markdown,stage_key,status,agent_ready,completed,COALESCE(agent_id,''),created_by,created_at,updated_at FROM tasks WHERE id=? AND deleted_at IS NULL`, id)
 	if err != nil {
 		return domain.Task{}, err
 	}
@@ -201,7 +201,7 @@ func (s *Store) GetTask(ctx context.Context, id string) (domain.Task, error) {
 	return ts[0], nil
 }
 func (s *Store) UpdateTask(ctx context.Context, t domain.Task, actor string) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE tasks SET title=?,description=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`, t.Title, t.Description, t.ID)
+	_, err := s.db.ExecContext(ctx, `UPDATE tasks SET title=?,description=?,detail_markdown=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`, t.Title, t.Description, t.Detail, t.ID)
 	if err == nil {
 		s.audit(ctx, actor, "task.update", "task", t.ID, t.Title)
 	}
@@ -661,7 +661,7 @@ func (s *Store) GetAgentWorkDetail(ctx context.Context, taskID string) (domain.A
 	return domain.AgentWorkDetail{Runs: runs, HumanReviews: reviews}, err
 }
 func (s *Store) ListTaskRefs(ctx context.Context, taskID string) ([]domain.Task, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT t.id,t.project_id,COALESCE(t.parent_id,''),t.title,t.description,t.stage_key,t.status,t.agent_ready,t.completed,COALESCE(t.agent_id,''),t.created_by,t.created_at,t.updated_at FROM task_refs r JOIN tasks t ON t.id=r.referenced_task_id WHERE r.task_id=? AND t.deleted_at IS NULL ORDER BY r.created_at DESC`, taskID)
+	rows, err := s.db.QueryContext(ctx, `SELECT t.id,t.project_id,COALESCE(t.parent_id,''),t.title,t.description,t.detail_markdown,t.stage_key,t.status,t.agent_ready,t.completed,COALESCE(t.agent_id,''),t.created_by,t.created_at,t.updated_at FROM task_refs r JOIN tasks t ON t.id=r.referenced_task_id WHERE r.task_id=? AND t.deleted_at IS NULL ORDER BY r.created_at DESC`, taskID)
 	if err != nil {
 		return nil, err
 	}
@@ -694,7 +694,7 @@ func scanTasks(rows *sql.Rows) ([]domain.Task, error) {
 	var out []domain.Task
 	for rows.Next() {
 		var t domain.Task
-		if err := rows.Scan(&t.ID, &t.ProjectID, &t.ParentID, &t.Title, &t.Description, &t.StageKey, &t.Status, &t.AgentReady, &t.Completed, &t.AgentID, &t.CreatedBy, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.ProjectID, &t.ParentID, &t.Title, &t.Description, &t.Detail, &t.StageKey, &t.Status, &t.AgentReady, &t.Completed, &t.AgentID, &t.CreatedBy, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, t)

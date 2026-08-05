@@ -38,9 +38,9 @@ type Stage struct {
 }
 
 type Task struct {
-	ID, ProjectID, ParentID, Title, Description, StageKey, Status string
-	AgentReady, Completed                                         bool
-	AgentID, CreatedBy, CreatedAt, UpdatedAt                      string
+	ID, ProjectID, ParentID, Title, Description, Detail, StageKey, Status string
+	AgentReady, Completed                                                 bool
+	AgentID, CreatedBy, CreatedAt, UpdatedAt                              string
 }
 
 type TaskHistory struct{ ID, TaskID, FromStage, FromStatus, ToStage, ToStatus, Actor, Reason, CreatedAt string }

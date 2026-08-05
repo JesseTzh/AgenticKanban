@@ -15,6 +15,15 @@ type Config struct {
 	WebhookBaseURL   string
 	WebDistPath      string
 	LogLevel         string
+	UploadStorage    string
+	UploadDir        string
+	UploadPublicURL  string
+	S3Bucket         string
+	S3Region         string
+	S3Endpoint       string
+	S3AccessKey      string
+	S3SecretKey      string
+	S3PublicURL      string
 }
 
 func Load() Config {
@@ -28,6 +37,15 @@ func Load() Config {
 		WebhookBaseURL:   env("WEBHOOK_BASE_URL", "http://localhost:8080"),
 		WebDistPath:      env("WEB_DIST_PATH", "web/dist"),
 		LogLevel:         env("LOG_LEVEL", "info"),
+		UploadStorage:    env("UPLOAD_STORAGE", "local"),
+		UploadDir:        env("UPLOAD_DIR", "data/uploads"),
+		UploadPublicURL:  env("UPLOAD_PUBLIC_URL", ""),
+		S3Bucket:         env("S3_BUCKET", ""),
+		S3Region:         env("S3_REGION", "us-east-1"),
+		S3Endpoint:       env("S3_ENDPOINT", ""),
+		S3AccessKey:      env("S3_ACCESS_KEY", ""),
+		S3SecretKey:      env("S3_SECRET_KEY", ""),
+		S3PublicURL:      env("S3_PUBLIC_URL", ""),
 	}
 }
 

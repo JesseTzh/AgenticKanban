@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Save } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { api } from '@/lib/api'
 import { queryKeys } from '@/lib/query-client'
 import type { Task } from '@/types'
+import { MarkdownEditor } from './markdown-editor'
 
 function DetailRow({ label, testID, value }: { label: string; testID: string; value: string }) {
   return (
@@ -18,6 +20,7 @@ function DetailRow({ label, testID, value }: { label: string; testID: string; va
 
 export function TaskDetailDialog({ onOpenChange, open, projectID, task }: { onOpenChange: (open: boolean) => void; open: boolean; projectID: string; task: Task }) {
   const [referencedTaskID, setReferencedTaskID] = useState('')
+  const [detail, setDetail] = useState(task.Detail || '')
   const queryClient = useQueryClient()
   const tasks = useQuery({ enabled: open, queryKey: queryKeys.tasks(projectID), queryFn: () => api.tasks(projectID) })
   const refs = useQuery({ enabled: open, queryKey: queryKeys.taskRefs(task.ID), queryFn: () => api.taskRefs(task.ID) })
@@ -29,15 +32,29 @@ export function TaskDetailDialog({ onOpenChange, open, projectID, task }: { onOp
       await queryClient.invalidateQueries({ queryKey: queryKeys.taskRefs(task.ID) })
     },
   })
+  const saveDetail = useMutation({
+    mutationFn: () => api.updateTask(task.ID, { Title: task.Title, Description: task.Description, Detail: detail }),
+    onSuccess: async () => queryClient.invalidateQueries({ queryKey: queryKeys.tasks(projectID) }),
+  })
   const referencedIDs = new Set(refs.data?.map((ref) => ref.ID))
   const candidates = tasks.data?.filter((candidate) => candidate.ID !== task.ID && !referencedIDs.has(candidate.ID)) ?? []
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent data-testid={`task-detail-dialog-${task.ID}`}>
+      <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto" data-testid={`task-detail-dialog-${task.ID}`}>
         <DialogHeader data-testid={`task-detail-header-${task.ID}`}>
           <DialogTitle data-testid={`task-detail-title-${task.ID}`}>{task.Title}</DialogTitle>
           <DialogDescription data-testid={`task-detail-description-${task.ID}`}>{task.Description || '暂无描述'}</DialogDescription>
         </DialogHeader>
+        <section className="grid gap-3" data-testid={`task-detail-markdown-${task.ID}`}>
+          <div className="flex items-center justify-between gap-3" data-testid={`task-detail-markdown-header-${task.ID}`}>
+            <h3 className="text-sm font-medium" data-testid={`task-detail-markdown-title-${task.ID}`}>任务详情</h3>
+            <Button data-testid={`task-detail-markdown-save-${task.ID}`} disabled={saveDetail.isPending} onClick={() => saveDetail.mutate()} size="sm" type="button">
+              <Save className="size-4" data-testid={`task-detail-markdown-save-icon-${task.ID}`} />保存详情
+            </Button>
+          </div>
+          <MarkdownEditor onChange={setDetail} taskID={task.ID} value={detail} />
+          {saveDetail.isError ? <p className="text-sm text-destructive" data-testid={`task-detail-markdown-error-${task.ID}`}>{saveDetail.error.message}</p> : null}
+        </section>
         <dl className="grid gap-4 sm:grid-cols-2" data-testid={`task-detail-fields-${task.ID}`}>
           <DetailRow label="阶段" testID={`task-detail-stage-${task.ID}`} value={task.StageKey} />
           <DetailRow label="状态" testID={`task-detail-status-${task.ID}`} value={task.Status} />
