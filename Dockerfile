@@ -3,6 +3,8 @@ WORKDIR /src/web
 COPY web/package.json web/package-lock.json* ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY web/ ./
+ARG VITE_APP_VERSION
+ENV VITE_APP_VERSION=${VITE_APP_VERSION}
 RUN npm run build
 
 FROM golang:1.26.3-bookworm AS go-builder
