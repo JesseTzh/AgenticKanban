@@ -70,7 +70,7 @@ export function TaskDetailDialog({ onOpenChange, open, projectID, task }: { onOp
         <div className="grid gap-3" data-testid={`task-detail-agent-work-${task.ID}`}>
           <h3 className="text-sm font-medium" data-testid={`task-detail-agent-work-title-${task.ID}`}>Agent 执行记录</h3>
           <div className="grid gap-2" data-testid={`task-detail-agent-run-list-${task.ID}`}>
-            {agentWork.data?.Runs.length ? agentWork.data.Runs.map((run) => (
+            {agentWork.data?.Runs?.length ? agentWork.data.Runs.map((run) => (
               <div className="rounded-md border px-3 py-2 text-sm" data-testid={`task-detail-agent-run-${task.ID}-${run.ID}`} key={run.ID}>
                 <p className="font-medium" data-testid={`task-detail-agent-run-kind-${run.ID}`}>{run.WorkType}</p>
                 <p className="text-muted-foreground" data-testid={`task-detail-agent-run-owner-${run.ID}`}>{run.AgentOwnerUsername} / {run.AgentKeyName}</p>
@@ -80,7 +80,7 @@ export function TaskDetailDialog({ onOpenChange, open, projectID, task }: { onOp
             )) : <p className="text-sm text-muted-foreground" data-testid={`task-detail-agent-run-empty-${task.ID}`}>暂无 Agent 执行记录</p>}
           </div>
           <div className="grid gap-2" data-testid={`task-detail-human-review-list-${task.ID}`}>
-            {agentWork.data?.HumanReviews.length ? agentWork.data.HumanReviews.map((review) => (
+            {agentWork.data?.HumanReviews?.length ? agentWork.data.HumanReviews.map((review) => (
               <div className="rounded-md border px-3 py-2 text-sm" data-testid={`task-detail-human-review-${task.ID}-${review.ID}`} key={review.ID}>
                 <p className="font-medium" data-testid={`task-detail-human-review-decision-${review.ID}`}>{review.Decision}</p>
                 <p data-testid={`task-detail-human-review-note-${review.ID}`}>{review.Note}</p>

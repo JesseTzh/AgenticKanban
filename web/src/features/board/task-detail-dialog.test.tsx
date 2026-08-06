@@ -64,6 +64,18 @@ describe('TaskDetailDialog', () => {
     expect(screen.queryByText('锁定状态')).not.toBeInTheDocument()
   })
 
+  it('renders empty agent work when the API returns null runs and reviews', async () => {
+    vi.spyOn(api, 'tasks').mockResolvedValue([task])
+    vi.spyOn(api, 'taskRefs').mockResolvedValue([])
+    vi.spyOn(api, 'agentWork').mockResolvedValue({ Runs: null, HumanReviews: null })
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    render(<QueryClientProvider client={queryClient}><TaskDetailDialog onOpenChange={vi.fn()} open projectID="project-1" task={task} /></QueryClientProvider>)
+
+    expect(await screen.findByText('暂无 Agent 执行记录')).toBeInTheDocument()
+    expect(screen.getByText('暂无人工审核记录')).toBeInTheDocument()
+  })
+
   it('submits a required human review note', async () => {
     vi.spyOn(api, 'approveTask').mockResolvedValue({})
     const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } })

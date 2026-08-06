@@ -6,6 +6,6 @@ export type Repository = { ID:string; ProjectID:string; Name:string; GitURL:stri
 export type Commit = { ID:string; ProjectID:string; RepositoryID:string; SHA:string; Message:string; Author:string; Branch:string; CommittedAt:string }
 export type HumanReview = { ID:string; TaskID:string; AgentRunID:string; Decision:string; Note:string; ReviewerID:string; CreatedAt:string }
 export type AgentRun = { ID:string; TaskID:string; AgentID:string; AgentKeyName:string; AgentOwnerUsername:string; WorkType:string; Status:string; Result:string; Passed:boolean | null; CreatedAt:string }
-export type AgentWorkDetail = { Runs:AgentRun[]; HumanReviews:HumanReview[] }
+export type AgentWorkDetail = { Runs:AgentRun[] | null; HumanReviews:HumanReview[] | null }
 export type AgentKey = { id:string; name:string; owner_id:string; owner_username:string; created_at:string }
 export type CreatedAgentKey = { id:string; name:string; token:string }
